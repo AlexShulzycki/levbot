@@ -37,6 +37,3 @@ def getOrderBook(ticker, limit):
 
     return df
 
-
-def indicators(df):
-    return True
