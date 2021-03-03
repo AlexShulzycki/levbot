@@ -5,15 +5,15 @@ from talib.abstract import *
 
 
 def api(url, payload):
-    response = requests.get("http://api.binance.com" + url, params=payload)
+    response = requests.get("http://fapi.binance.com" + url, params=payload)
     df = pandas.DataFrame(json.loads(response.text))
 
     return df
 
 
 def getPrices(ticker, interval, limit):
-    payload = {"symbol": ticker, "interval": interval, "limit": limit}
-    df = api("/api/v3/klines", payload)
+    payload = {"pair": ticker, "interval": interval, "contractType":"PERPETUAL", "limit": limit}
+    df = api("/fapi/v1/continuousKlines", payload)
 
     # select relevant columns
     df = df.iloc[:, 0:6]
