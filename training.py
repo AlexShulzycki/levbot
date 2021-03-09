@@ -20,23 +20,37 @@ def Train(epochs, restore:bool):
 
 
     model = tf.keras.models.Sequential([
-        keras.layers.Dense(400, activation="sigmoid"),
-        keras.layers.Dense(400, activation="sigmoid"),
-        keras.layers.Dense(400, activation="sigmoid"),
-        tf.keras.layers.Dropout(0.2),
-        keras.layers.Dense(200, activation="sigmoid"),
-        keras.layers.Dense(100, activation="sigmoid"),
-        keras.layers.Dense(50, activation="sigmoid"),
+        keras.layers.Reshape((50,8), input_shape=(400,)),
+        keras.layers.LayerNormalization(axis=1),
+        keras.layers.Conv1D(80, 3),
+        keras.layers.MaxPool1D(),
+        keras.layers.Conv1D(80, 3),
+        keras.layers.MaxPool1D(),
+        keras.layers.Conv1D(80, 3),
+        keras.layers.MaxPool1D(),
+        keras.layers.Conv1D(80, 3),
+        keras.layers.MaxPool1D(),
+
+
+        keras.layers.Dropout(0.01),
+
+        keras.layers.Flatten(input_shape=(40,8)),
+
+        keras.layers.Dense(160),
+        keras.layers.Dense(160),
+        keras.layers.Dense(160),
+        keras.layers.Dense(80),
+        keras.layers.Dense(40),
         keras.layers.Dense(3, activation="softmax")
     ])
 
     print("Compiling model")
     model.compile(optimizer='adam',
-                  loss=tf.keras.losses.CategoricalCrossentropy(),
+                  loss=tf.keras.losses.SparseCategoricalCrossentropy(),
                   metrics=['accuracy'])
 
     #Checkpointing
-    checkpoint_path = "checkpoints/cp.ckpt"
+    checkpoint_path = "checkpoints/cp1.ckpt"
     cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_path, save_weights_only=True)
     
     #restore checkpoint
@@ -46,8 +60,8 @@ def Train(epochs, restore:bool):
     #Adjust learning rate
     lr_callback = tf.keras.callbacks.ReduceLROnPlateau(
         monitor="loss",
-        factor=0.1,
-        patience=3,
+        factor=0.5,
+        patience=10,
         verbose=1,
         mode="auto",
         min_delta=0.0001,
@@ -59,8 +73,8 @@ def Train(epochs, restore:bool):
     history = model.fit(dataset, labels, epochs=epochs, callbacks=[cp_callback, lr_callback], validation_data=(v_x,v_y))
 
     # summarize history for accuracy
-    plt.plot(history.history['acc'])
-    plt.plot(history.history['val_acc'])
+    plt.plot(history.history['accuracy'])
+    plt.plot(history.history['val_accuracy'])
     plt.title('model accuracy')
     plt.ylabel('accuracy')
     plt.xlabel('epoch')
@@ -76,7 +90,18 @@ def Train(epochs, restore:bool):
     plt.show()
     
     print(model.evaluate(v_x,v_y))
-    model.save("model")
+
+    tf.keras.models.save_model(
+        model=model,
+        filepath='model',
+        save_format='tf'
+    )
+
+
+def Save():
+    model = tf.keras.models.load_model("model")
+
 
 if __name__ == '__main__':
-    Train(5, True)
+    Train(50, True)
+    #Save()
