@@ -4,8 +4,9 @@ from tensorflow.keras import layers
 from tensorflow import keras
 import matplotlib.pyplot as plt
 
-def Train(epochs, restore:bool):
-    
+def Train(epochs, restore:bool, save:bool):
+
+    print("Loading data")
     #Training data
     dataset = pd.read_csv("Data/dataset.csv").apply(pd.to_numeric)
     labels = dataset.pop("Position").to_numpy()
@@ -91,17 +92,13 @@ def Train(epochs, restore:bool):
     
     print(model.evaluate(v_x,v_y))
 
-    tf.keras.models.save_model(
-        model=model,
-        filepath='model',
-        save_format='tf'
-    )
-
-
-def Save():
-    model = tf.keras.models.load_model("model")
+    if save:
+        tf.keras.models.save_model(
+            model=model,
+            filepath='model',
+            save_format='tf'
+        )
 
 
 if __name__ == '__main__':
-    Train(50, True)
-    #Save()
+    Train(15, True, True)
