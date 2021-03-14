@@ -12,9 +12,7 @@ import Indicators
 import Preprocess
 from datetime import datetime
 import time
-import hmac
-import hashlib
-import requests
+import bridge
 
 class bot():
 
@@ -46,50 +44,14 @@ class bot():
         # Return prediction
         return prediction.index(max(prediction))
 
-    #Send to API
-    def takePosition(self, side, tp, sl, quantity):
-        headers = {"Content-type":"application/x-www-form-urlencoded" , "X-MBX-APIKEY": self.api_key}
-
-        def send(querystring):
-
-            # Add timestamp
-            querystring += "&timestamp="+ str(time.time()*1000)[0:13]
-            querystring += "&signature="+ str(hmac.new(bytes(self.api_secret, "utf-8"), bytes(querystring,"utf-8"), hashlib.sha256).hexdigest())
-
-            # Send request
-            print (requests.post(self.url + "/fapi/v1/order", headers=headers, data=querystring).text)
-
-
-        # Market order
-        querystring = "symbol=BTCUSDT&side="+side+"&type=MARKET&quantity="+quantity
-        send(querystring)
-
-        # Flip buy to sell and vice versa
-        if(side == "BUY"):
-            side = "SELL"
-        else:
-            side = "BUY"
-
-        # Take profit
-        querystring = "symbol=BTCUSDT&side="+side+"&type=TRAILING_STOP_MARKET&callbackRate=0.05&quantity="+quantity+"&activationPrice="+tp
-        send(querystring)
-
-        # Stop loss
-        querystring = "symbol=BTCUSDT&side="+side+"&type=STOP_MARKET&quantity="+quantity+"&stopPrice="+sl
-        send(querystring)
-
-        # Reset cooldown
-        self.cooldown = 5
-        return
-
     #Runs every minute on a fresh candle
     # Take profit is 0.35 %, stop loss is 0.2 %
     def tick(self):
         print(datetime.now())
         prediction = self.predict()
 
-        amount = 2/self.lastprice.item()
-        amount = "{:f}".format(amount)
+        amount = 200/self.lastprice.item() # Dollar amount * Leverage
+        amount = "{:.3f}".format(amount)
 
         if(self.cooldown > 0):
             self.cooldown -= 1
@@ -101,14 +63,17 @@ class bot():
         # Long
         if(prediction == 1):
             print(self.lastprice*1.003)
-            self.takePosition("BUY", str(self.lastprice*1.003)[0:8], str(self.lastprice*0.998)[0:8], amount)
+            self.bridge.takePosition("BUY", str(self.lastprice*1.003)[0:8], str(self.lastprice*0.998)[0:8], amount)
+            # Reset cooldown
+            self.cooldown = 5
             return
 
         # Short
         if(prediction ==2):
             print(self.lastprice * 1.003)
-            self.takePosition("SELL", str(self.lastprice * 0.997)[0:8], str(self.lastprice * 0.1002)[0:8], amount)
-            return
+            self.bridge.takePosition("SELL", str(self.lastprice * 0.997)[0:8], str(self.lastprice * 0.1002)[0:8], amount)
+            # Reset cooldown
+            self.cooldown = 5
             return
 
     #Runs tick every minute on a fresh candle
@@ -149,6 +114,9 @@ class bot():
         self.ticker = ticker
         # Load TF Model
         self.model = tf.keras.models.load_model(model)
+
+        # Create bridge
+        self.bridge = bridge.bridge(self.url)
 
         # Start bot
         self.schedule(runsFor)
