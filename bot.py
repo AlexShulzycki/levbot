@@ -106,7 +106,7 @@ class bot():
 
         # Take profit, stop loss
         self.tp = 0.25/100
-        self.sl = 0.2/200
+        self.sl = 0.15/200
 
         # Import API keys
         f = open("Data/API.txt", "r")

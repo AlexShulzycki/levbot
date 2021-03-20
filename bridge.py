@@ -17,8 +17,8 @@ class bridge():
         querystring += "&signature=" + str(
             hmac.new(bytes(self.api_secret, "utf-8"), bytes(querystring, "utf-8"), hashlib.sha256).hexdigest())
 
-        # Send request
-        return json.loads(requests.get(self.url + "/fapi/v1/order", headers=headers, params=querystring).text)
+        # Send request and return status
+        return json.loads(requests.get(self.url + "/fapi/v1/order", headers=headers, params=querystring).text)["status"]
 
 
     def cancelAll(self):
@@ -89,11 +89,11 @@ class bridge():
             side = "BUY"
 
         # Take profit
-        querystring = "symbol="+self.ticker+"&side=" + side + "&type=TRAILING_STOP_MARKET&callbackRate=0.1&quantity=" + quantity + "&activationPrice=" + tp
+        querystring = "symbol="+self.ticker+"&side=" + side + "&reduceOnly=true&type=TRAILING_STOP_MARKET&callbackRate=0.1&quantity=" + quantity + "&activationPrice=" + tp
         self.orders.append(json.loads(send(querystring))["orderId"])
 
         # Stop loss
-        querystring = "symbol="+self.ticker+"&side=" + side + "&type=STOP_MARKET&quantity=" + quantity + "&stopPrice=" + sl
+        querystring = "symbol="+self.ticker+"&side=" + side + "&reduceOnly=true&type=STOP_MARKET&quantity=" + quantity + "&stopPrice=" + sl
         self.orders.append(json.loads(send(querystring))["orderId"])
 
         #Debug

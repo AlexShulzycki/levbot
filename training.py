@@ -101,4 +101,4 @@ def Train(epochs, restore:bool, save:bool):
 
 
 if __name__ == '__main__':
-    Train(15, True, True)
+    Train(30, True, True)
