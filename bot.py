@@ -47,11 +47,11 @@ class bot():
     #Runs every minute on a fresh candle
     # Take profit is 0.35 %, stop loss is 0.2 %
     def tick(self):
+        self.bridge.tick()
         print(datetime.now())
         prediction = self.predict()
 
         amount = 200/self.lastprice.item() # Dollar amount * Leverage
-        amount = "{:.3f}".format(amount)
 
         if(self.cooldown > 0):
             self.cooldown -= 1
@@ -62,16 +62,20 @@ class bot():
             return
         # Long
         if(prediction == 1):
-            print(self.lastprice*1.003)
-            self.bridge.takePosition("BUY", str(self.lastprice*1.003)[0:8], str(self.lastprice*0.998)[0:8], amount)
+            tp = 1 + self.tp
+            sl = 1- self.sl
+
+            self.bridge.takePosition("BUY", str(self.lastprice*tp), str(self.lastprice*sl), amount)
             # Reset cooldown
             self.cooldown = 5
             return
 
         # Short
         if(prediction ==2):
-            print(self.lastprice * 1.003)
-            self.bridge.takePosition("SELL", str(self.lastprice * 0.997)[0:8], str(self.lastprice * 0.1002)[0:8], amount)
+            tp = 1 - self.tp
+            sl = 1 + self.sl
+
+            self.bridge.takePosition("SELL", str(self.lastprice * tp), str(self.lastprice * sl), amount)
             # Reset cooldown
             self.cooldown = 5
             return
@@ -100,6 +104,10 @@ class bot():
     def __init__(self, ticker, model, runsFor):
         print("Bot started")
 
+        # Take profit, stop loss
+        self.tp = 0.25/100
+        self.sl = 0.2/200
+
         # Import API keys
         f = open("Data/API.txt", "r")
         self.api_key = f.readline().rstrip()
@@ -116,7 +124,7 @@ class bot():
         self.model = tf.keras.models.load_model(model)
 
         # Create bridge
-        self.bridge = bridge.bridge(self.url)
+        self.bridge = bridge.bridge(self.url, self.ticker)
 
         # Start bot
         self.schedule(runsFor)

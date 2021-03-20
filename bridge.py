@@ -6,10 +6,54 @@ import json
 
 class bridge():
 
+    def orderStatus(self, order_id):
+
+        # Headers and query
+        headers = {"Content-type": "application/x-www-form-urlencoded", "X-MBX-APIKEY": self.api_key}
+        querystring = "symbol=" + self.ticker +"&orderId="+ str(order_id)
+
+        # Add timestamp
+        querystring += "&timestamp=" + str(time.time() * 1000)[0:13]
+        querystring += "&signature=" + str(
+            hmac.new(bytes(self.api_secret, "utf-8"), bytes(querystring, "utf-8"), hashlib.sha256).hexdigest())
+
+        # Send request
+        return json.loads(requests.get(self.url + "/fapi/v1/order", headers=headers, params=querystring).text)
+
+
+    def cancelAll(self):
+
+        # Headers and query
+        headers = {"Content-type": "application/x-www-form-urlencoded", "X-MBX-APIKEY": self.api_key}
+        querystring = "symbol="+self.ticker
+
+        # Add timestamp
+        querystring += "&timestamp=" + str(time.time() * 1000)[0:13]
+        querystring += "&signature=" + str(
+            hmac.new(bytes(self.api_secret, "utf-8"), bytes(querystring, "utf-8"), hashlib.sha256).hexdigest())
+
+        # Send request
+        print(requests.delete(self.url + "/fapi/v1/allOpenOrders", headers=headers, data=querystring).text)
+
     def tick(self):
         # Check if take profit or stop loss is complete, if so, cancel other order
-        print(self.orders)
-        return
+        if(len(self.orders) == 0):
+            # Return if we got no positions
+            return
+        # TP
+        if(self.orderStatus(self.orders[0]) == "FILLED"):
+            print("Take profit filled")
+            self.cancelAll()
+            self.orders = []
+            return
+
+        # SL
+        if (self.orderStatus(self.orders[1]) == "FILLED"):
+            print("Stop Loss Filled")
+            self.cancelAll()
+            self.orders = []
+            return
+
 
     def takePosition(self, side, tp, sl, quantity):
 
@@ -18,6 +62,11 @@ class bridge():
             return
 
         headers = {"Content-type": "application/x-www-form-urlencoded", "X-MBX-APIKEY": self.api_key}
+
+        # Sanitize inputs
+        tp = str(tp)[0:7]
+        sl = str(sl)[0:7]
+        quantity = "{:.3f}".format(quantity)
 
         def send(querystring):
 
@@ -30,7 +79,7 @@ class bridge():
             return requests.post(self.url + "/fapi/v1/order", headers=headers, data=querystring).text
 
         # Market order
-        querystring = "symbol=BTCUSDT&side=" + side + "&type=MARKET&quantity=" + quantity
+        querystring = "symbol="+self.ticker+"&side=" + side + "&type=MARKET&quantity=" + quantity
         send(querystring)
 
         # Flip buy to sell and vice versa
@@ -40,18 +89,21 @@ class bridge():
             side = "BUY"
 
         # Take profit
-        querystring = "symbol=BTCUSDT&side=" + side + "&type=TRAILING_STOP_MARKET&callbackRate=0.05&quantity=" + quantity + "&activationPrice=" + tp
-        self.orders.append(json.loads(send(querystring)))
+        querystring = "symbol="+self.ticker+"&side=" + side + "&type=TRAILING_STOP_MARKET&callbackRate=0.1&quantity=" + quantity + "&activationPrice=" + tp
+        self.orders.append(json.loads(send(querystring))["orderId"])
 
         # Stop loss
-        querystring = "symbol=BTCUSDT&side=" + side + "&type=STOP_MARKET&quantity=" + quantity + "&stopPrice=" + sl
-        self.orders.append(json.loads(send(querystring)))
+        querystring = "symbol="+self.ticker+"&side=" + side + "&type=STOP_MARKET&quantity=" + quantity + "&stopPrice=" + sl
+        self.orders.append(json.loads(send(querystring))["orderId"])
 
+        #Debug
+        print(side, quantity)
         return
 
-    def __init__(self, url):
+    def __init__(self, url, ticker):
         self.url = url
         self.lastprice = 0
+        self.ticker = ticker
 
         # Import API keys
         f = open("Data/API.txt", "r")
