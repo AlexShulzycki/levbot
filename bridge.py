@@ -43,6 +43,7 @@ class bridge():
         # TP
         if(self.orderStatus(self.orders[0]) == "FILLED"):
             print("Take profit filled")
+            self.good += 1
             self.cancelAll()
             self.orders = []
             return
@@ -50,6 +51,7 @@ class bridge():
         # SL
         if (self.orderStatus(self.orders[1]) == "FILLED"):
             print("Stop Loss Filled")
+            self.bad += 1
             self.cancelAll()
             self.orders = []
             return
@@ -67,6 +69,9 @@ class bridge():
         tp = str(tp)[0:7]
         sl = str(sl)[0:7]
         quantity = "{:.3f}".format(quantity)
+
+        # Debug
+        print(side, quantity)
 
         def send(querystring):
 
@@ -89,15 +94,13 @@ class bridge():
             side = "BUY"
 
         # Take profit
-        querystring = "symbol="+self.ticker+"&side=" + side + "&reduceOnly=true&type=TRAILING_STOP_MARKET&callbackRate=0.1&quantity=" + quantity + "&activationPrice=" + tp
+        querystring = "symbol="+self.ticker+"&side=" + side + "&reduceOnly=true&type=TRAILING_STOP_MARKET&callbackRate=0.12&quantity=" + quantity + "&activationPrice=" + tp
         self.orders.append(json.loads(send(querystring))["orderId"])
 
         # Stop loss
         querystring = "symbol="+self.ticker+"&side=" + side + "&reduceOnly=true&type=STOP_MARKET&quantity=" + quantity + "&stopPrice=" + sl
         self.orders.append(json.loads(send(querystring))["orderId"])
 
-        #Debug
-        print(side, quantity)
         return
 
     def __init__(self, url, ticker):
@@ -112,4 +115,7 @@ class bridge():
         f.close()
 
         self.orders = []
+
+        self.good = 0
+        self.bad = 0
 

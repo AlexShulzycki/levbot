@@ -1,0 +1,38 @@
+.bot{
+  border: 5px outset red;
+  background-color: lightblue;
+  text-align: center;
+  width: 20%;
+  float: left;
+  margin-left: 2%;
+  padding: 1%
+}
+
+.running{
+  color: green;
+}
+.stopped{
+  color: red;
+}
+
+.trades{
+  display: inline-block;
+  margin-left: 5%;
+}
+
+.Start{
+  background: green;
+}
+.Stop{
+  background: red;
+}
+a{
+  border: 5px solid grey;
+  width: 50%;
+  margin-left: 23%;
+  padding: 1%;
+  color: white;
+  display:block;
+  font-family: sans-serif;
+  text-decoration: none;
+}

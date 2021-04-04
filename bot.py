@@ -13,6 +13,7 @@ import Preprocess
 from datetime import datetime
 import time
 import bridge
+import threading
 
 class bot():
 
@@ -81,10 +82,10 @@ class bot():
             return
 
     #Runs tick every minute on a fresh candle
-    def schedule(self, runsFor):
-        print("Bot scheduled for "+str(runsFor)+"m")
+    def schedule(self):
+        print("Thread Started")
 
-        for i in range(0, runsFor):
+        while self.Running:
 
             x = datetime.now()
             if(x.minute == 59):
@@ -96,17 +97,23 @@ class bot():
 
             time.sleep(waitTime.seconds)
             self.tick()
-
         print("Schedule finished, exiting now.")
 
+    def start(self):
+        self.Running = True
+        self.thread = threading.Thread(target=self.schedule)
+        self.thread.start()
+
+    def stop(self):
+        self.Running = False
 
     # Init
-    def __init__(self, ticker, model, runsFor):
-        print("Bot started")
+    def __init__(self, ticker, model):
+        print("Bot Created")
 
         # Take profit, stop loss
         self.tp = 0.25/100
-        self.sl = 0.15/200
+        self.sl = 0.2/200
 
         # Import API keys
         f = open("Data/API.txt", "r")
@@ -126,6 +133,7 @@ class bot():
         # Create bridge
         self.bridge = bridge.bridge(self.url, self.ticker)
 
-        # Start bot
-        self.schedule(runsFor)
+        # Bot is not running at the moment
+        self.Running = False
+
 
