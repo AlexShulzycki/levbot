@@ -5,7 +5,7 @@ import bot
 
 hostName = "localhost"
 serverPort = 8080
-bots = [bot.bot("BTCUSDT", "model")]
+bots = [bot.bot("BTCUSDT", "model.tflite")]
 
 def printBots():
     string = ""

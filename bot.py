@@ -5,7 +5,7 @@
 # Preprocess data
 # Feed data to model
 # Return buy, sell, or neutral signal
-import tensorflow as tf
+import tflite_runtime.interpreter as tflite
 import numpy as np
 import marketData
 import Indicators
@@ -35,10 +35,17 @@ class bot():
         # Preprocess data into a numpy array
         inputs = np.array(Preprocess.prepare(df))
         # Reshape array for tensor input
-        inputs = inputs.reshape(1,400)
+        inputs = inputs.reshape(1,400).astype("float32")
 
         # 0 for none, 1 for short, 2 for long.
-        prediction = self.model.predict(inputs)[0].tolist()
+        in_det = self.interpreter.get_input_details()
+        out_det = self.interpreter.get_output_details()
+        self.interpreter.set_tensor(in_det[0]["index"], inputs)
+
+        self.interpreter.invoke()
+        
+        prediction = self.interpreter.get_tensor(out_det[0]["index"])
+        prediction = prediction[0].tolist()
 
         print("Neutral: "+str(prediction[0])+" Long: "+str(prediction[1]) +" Short: "+str(prediction[2]))
 
@@ -128,7 +135,9 @@ class bot():
 
         self.ticker = ticker
         # Load TF Model
-        self.model = tf.keras.models.load_model(model)
+        self.interpreter = tflite.Interpreter(model_path=model)
+        self.interpreter.allocate_tensors()
+
 
         # Create bridge
         self.bridge = bridge.bridge(self.url, self.ticker)

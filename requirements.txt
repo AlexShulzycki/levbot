@@ -1,8 +1,6 @@
-tensorflow
 numpy
 matplotlib
 mplfinance
 pandas
 requests
-ta-lib
-jupyter
+TA-Lib

@@ -1,8 +1,9 @@
 import pandas as pd
 import tensorflow as tf
-from tensorflow.keras import layers
 from tensorflow import keras
 import matplotlib.pyplot as plt
+
+# TENSORFLOW HAS TO BE INSTALLED MANUALLY
 
 def Train(epochs, restore:bool, save:bool):
 
