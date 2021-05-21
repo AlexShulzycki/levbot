@@ -7,12 +7,9 @@
 # Return buy, sell, or neutral signal
 import tflite_runtime.interpreter as tflite
 import numpy as np
-import marketData
-import Indicators
-import Preprocess
+from Client import marketData, Indicators, bridge, Preprocess
 from datetime import datetime
 import time
-import bridge
 import threading
 
 class bot():
@@ -100,6 +97,7 @@ class bot():
             else:
                 y = x.replace(minute=x.minute + 1, second=1, microsecond=0)
 
+
             waitTime = y - x
 
             time.sleep(waitTime.seconds)
@@ -107,6 +105,9 @@ class bot():
         print("Schedule finished, exiting now.")
 
     def start(self):
+        if(self.Running):
+            #Skip if already running
+            return
         self.Running = True
         self.thread = threading.Thread(target=self.schedule)
         self.thread.start()
@@ -115,7 +116,7 @@ class bot():
         self.Running = False
 
     # Init
-    def __init__(self, ticker, model):
+    def __init__(self, ticker):
         print("Bot Created")
 
         # Take profit, stop loss
@@ -123,7 +124,7 @@ class bot():
         self.sl = 0.2/200
 
         # Import API keys
-        f = open("Data/API.txt", "r")
+        f = open("../Data/API.txt", "r")
         self.api_key = f.readline().rstrip()
         self.api_secret = f.readline().rstrip()
         f.close()
@@ -135,7 +136,7 @@ class bot():
 
         self.ticker = ticker
         # Load TF Model
-        self.interpreter = tflite.Interpreter(model_path=model)
+        self.interpreter = tflite.Interpreter(model_path= "models/"+ticker+".tflite")
         self.interpreter.allocate_tensors()
 
 

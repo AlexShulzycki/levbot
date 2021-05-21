@@ -1,11 +1,13 @@
 # Python 3 server
 
 from http.server import BaseHTTPRequestHandler, HTTPServer
-import bot
+
+from Client import bot
 
 hostName = "localhost"
 serverPort = 8080
-bots = [bot.bot("BTCUSDT", "model.tflite")]
+bots = []
+
 
 def printBots():
     string = ""
@@ -13,7 +15,7 @@ def printBots():
     for bot in bots:
         running = bot.Running
         button = ""
-        if(running):
+        if (running):
             running = "running"
             button = "Stop"
         else:
@@ -24,38 +26,43 @@ def printBots():
         bad = bot.bridge.bad
 
         # Open div, add title
-        string+= "<div class= 'bot'><h1 class = '"+running+"'> "+bot.ticker+" </h1>"
+        string += "<div class= 'bot'><h1 class = '" + running + "'> " + bot.ticker + " </h1>"
 
         # Start/Stop
-        string+= "<h4>"+bot.url+"</h4><a class='"+button+"' href='bot"+str(i)+button+"'>"+button+"</a>"
+        string += "<h4>" + bot.url + "</h4><a class='" + button + "' href='bot" + str(
+            i) + button + "'>" + button + "</a>"
 
         # Trades
-        string+= "<div class= trades><h4>Good Trades</h4><p>" +str(good)+ "</p></div>"
-        string+= "<div class= trades><h4>Bad Trades</h4><p>" + str(bad) + "</p></div>"
+        string += "<div class= trades><h4>Good Trades</h4><p>" + str(good) + "</p></div>"
+        string += "<div class= trades><h4>Bad Trades</h4><p>" + str(bad) + "</p></div>"
 
         # Close Div
-        string+= "</div>"
-        i+=1
+        string += "</div>"
+        i += 1
     return string
+
 
 class MyServer(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         # Send CSS
-        if(self.path == "/style.css"):
+        if (self.path == "/style.css"):
             self.send_header('Content-type', 'text/css')
             self.end_headers()
             self.wfile.write(bytes(open("style.css").read(), "utf-8"))
             return
 
-        #bot commands
-        if(self.path[1:4] == "bot"):
-            print(self.path[1:4])
+        # bot commands
+        if (self.path[1:4] == "bot"):
             id = int(self.path[4:5])
-            if(self.path[5:] == "Start"):
+
+            if (self.path[5:] == "Start"):
                 bots[id].start()
-            elif(self.path[5:] == "Stop"):
+                #self.wfile.write(bytes("Bot Started", "utf-8"))
+
+            elif (self.path[5:] == "Stop"):
                 bots[id].stop()
+                #self.wfile.write(bytes("Bot Stopped", "utf-8"))
 
             # All done
 
@@ -63,7 +70,8 @@ class MyServer(BaseHTTPRequestHandler):
         self.send_header("Content-type", "text/html")
         self.end_headers()
         # Header tags, including stylesheet
-        self.wfile.write(bytes("<html><head><title>levbot</title><link rel='stylesheet' href='style.css'></head>", "utf-8"))
+        self.wfile.write(
+            bytes("<html><head><title>levbot</title><link rel='stylesheet' href='style.css'></head>", "utf-8"))
         # Debug
         self.wfile.write(bytes("<p>Request: %s</p>" % self.path, "utf-8"))
         # Open body tags
@@ -75,7 +83,17 @@ class MyServer(BaseHTTPRequestHandler):
         # Close body and html tags
         self.wfile.write(bytes("</body></html>", "utf-8"))
 
+
 if __name__ == "__main__":
+
+    # Detect models we can use
+    import os
+
+    print("Bots available:")
+    for x in os.listdir("models"):
+        print(x[0:-7])
+        bots.append(bot.bot(x[0:-7]))
+
     webServer = HTTPServer((hostName, serverPort), MyServer)
     print("Server started http://%s:%s" % (hostName, serverPort))
 

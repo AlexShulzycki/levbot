@@ -109,7 +109,7 @@ class bridge():
         self.ticker = ticker
 
         # Import API keys
-        f = open("Data/API.txt", "r")
+        f = open("../Data/API.txt", "r")
         self.api_key = f.readline().rstrip()
         self.api_secret = f.readline().rstrip()
         f.close()
