@@ -5,21 +5,18 @@ import matplotlib.pyplot as plt
 
 # TENSORFLOW HAS TO BE INSTALLED MANUALLY
 
-def Train(epochs, restore:bool, save:bool):
+def Train(pair ,epochs, restore:bool, save:bool):
 
     print("Loading data")
-    #Training data
-    dataset = pd.read_csv("Data/dataset.csv").apply(pd.to_numeric)
-    labels = dataset.pop("Position").to_numpy()
-    dataset.pop("0")
-    dataset = dataset.to_numpy()
-    
-    #Validation data
-    v_x = pd.read_csv("Data/validationdataset.csv").apply(pd.to_numeric)
-    v_y = v_x.pop("Position").to_numpy()
-    v_x.pop("0")
-    v_x = v_x.to_numpy()
+    # Training data
+    trainingDataset = pd.read_csv("Data/"+pair+"/training.csv").apply(pd.to_numeric)
+    trainingLabels = trainingDataset.pop("Position").to_numpy()
+    dataset = trainingDataset.to_numpy()
 
+    # Validation data
+    v_x = pd.read_csv("Data/"+pair+"/validation.csv").apply(pd.to_numeric)
+    v_y = v_x.pop("Position").to_numpy()
+    v_x = v_x.to_numpy()
 
     model = tf.keras.models.Sequential([
         keras.layers.Reshape((50,8), input_shape=(400,)),
@@ -46,13 +43,15 @@ def Train(epochs, restore:bool, save:bool):
         keras.layers.Dense(3, activation="softmax")
     ])
 
+
+
     print("Compiling model")
     model.compile(optimizer='adam',
                   loss=tf.keras.losses.SparseCategoricalCrossentropy(),
                   metrics=['accuracy'])
 
     #Checkpointing
-    checkpoint_path = "checkpoints/cp1.ckpt"
+    checkpoint_path = "checkpoints/"+pair+"/cp.ckpt"
     cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_path, save_weights_only=True)
     
     #restore checkpoint
@@ -71,8 +70,10 @@ def Train(epochs, restore:bool, save:bool):
         min_lr=0,
     )
 
+    print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
+
     print("Fitting")
-    history = model.fit(dataset, labels, epochs=epochs, callbacks=[cp_callback, lr_callback], validation_data=(v_x,v_y))
+    history = model.fit(x = trainingDataset, y =trainingLabels , epochs=epochs, callbacks=[cp_callback, lr_callback], validation_data=(v_x,v_y))
 
     # summarize history for accuracy
     plt.plot(history.history['accuracy'])
@@ -96,10 +97,10 @@ def Train(epochs, restore:bool, save:bool):
     if save:
         tf.keras.models.save_model(
             model=model,
-            filepath='model',
+            filepath="model/"+pair,
             save_format='tf'
         )
 
 
 if __name__ == '__main__':
-    Train(30, True, True)
+    Train("BTCUSDT", 50, True, True)

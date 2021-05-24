@@ -16,7 +16,7 @@ if __name__ == "__main__":
     # Time step for requests
     block = 500 * 60 * 1000
     current -= block
-    amount = 50
+    amount = 500
 
     # Populating latest
     df = marketData.getPrices(pair, timeframe, 500)
