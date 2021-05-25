@@ -75,7 +75,7 @@ class bot():
             tp = 1 + self.tp
             sl = 1 - self.sl
 
-            self.bridge.takePosition("BUY", str(self.lastprice * tp), str(self.lastprice * sl), amount)
+            self.bridge.takePosition("BUY", float(self.lastprice * tp), float(self.lastprice * sl), amount)
             # Reset cooldown
             self.cooldown = 5
             return
@@ -85,7 +85,7 @@ class bot():
             tp = 1 - self.tp
             sl = 1 + self.sl
 
-            self.bridge.takePosition("SELL", str(self.lastprice * tp), str(self.lastprice * sl), amount)
+            self.bridge.takePosition("SELL", float(self.lastprice * tp), float(self.lastprice * sl), amount)
             # Reset cooldown
             self.cooldown = 5
             return
@@ -123,7 +123,7 @@ class bot():
         self.Running = False
 
     # Init
-    def __init__(self, ticker, tp, sl, leverage):
+    def __init__(self, ticker, tp, sl, leverage, prce_prec, amnt_prec):
         print(ticker+" Bot Created")
 
         # Take profit, stop loss, leverage
@@ -148,7 +148,7 @@ class bot():
         self.interpreter.allocate_tensors()
 
         # Create bridge
-        self.bridge = bridge.bridge(self.url, self.ticker)
+        self.bridge = bridge.bridge(self.url, self.ticker, int(prce_prec), int(amnt_prec))
 
         # Bot is not running yet
         self.Running = False

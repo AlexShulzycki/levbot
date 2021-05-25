@@ -65,12 +65,10 @@ class bridge():
 
         headers = {"Content-type": "application/x-www-form-urlencoded", "X-MBX-APIKEY": self.api_key}
 
-        # Make sure the tp/sl strings are not too long
-        tp = (str(tp)[:7]) if len(str(tp)) > 7 else str(tp)
-        sl = (str(sl)[:7]) if len(str(sl)) > 7 else str(sl)
-
-        # Format the quantity to 3 decimal precision
-        quantity = "{:.3f}".format(quantity)
+        # Format all prices to 3 decimal precision
+        quantity = ("{:."+str(self.amntprec)+"f}").format(quantity)
+        tp = ("{:."+str(self.prcprec)+"f}").format(tp)
+        sl = ("{:."+str(self.prcprec)+"f}").format(sl)
 
         # Debug
         print(self.ticker, side, quantity)
@@ -99,20 +97,22 @@ class bridge():
         querystring = "symbol="+self.ticker+"&side=" + side + "&reduceOnly=true&type=TAKE_PROFIT&quantity=" + quantity + "&stopPrice=" + tp+"&price="+tp
         res = json.loads(send(querystring))
         print(res)
-        self.orders.append(["orderId"])
+        self.orders.append(res["orderId"])
 
         # Stop loss
         querystring = "symbol="+self.ticker+"&side=" + side + "&reduceOnly=true&type=STOP_MARKET&quantity=" + quantity + "&stopPrice=" + sl
         res = json.loads(send(querystring))
         print(res)
-        self.orders.append(["orderId"])
+        self.orders.append(res["orderId"])
 
         return
 
-    def __init__(self, url, ticker):
+    def __init__(self, url, ticker, prcprec, amntprec):
         self.url = url
         self.lastprice = 0
         self.ticker = ticker
+        self.prcprec = prcprec
+        self.amntprec = amntprec
 
         # Import API keys
         f = open("API.txt", "r")

@@ -99,7 +99,7 @@ def initializeBots():
         # Check if tflite model exists in the models folder
         if x[0]+".tflite" in models:
             # Model exists, initialize the bot
-            bots.append(bot.bot(x[0], float(x[1]), float(x[2]), float(x[3])))
+            bots.append(bot.bot(x[0], float(x[1]), float(x[2]), float(x[3]), float(x[4]), float(x[5])))
         else:
             print(x[0]+" does not have a .tflite model, skipping.")
 
