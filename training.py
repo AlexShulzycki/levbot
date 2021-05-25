@@ -14,9 +14,9 @@ def Train(pair ,epochs, restore:bool, save:bool):
     dataset = trainingDataset.to_numpy()
 
     # Validation data
-    v_x = pd.read_csv("Data/"+pair+"/validation.csv").apply(pd.to_numeric)
-    v_y = v_x.pop("Position").to_numpy()
-    v_x = v_x.to_numpy()
+   # v_x = pd.read_csv("Data/"+pair+"/validation.csv").apply(pd.to_numeric)
+   # v_y = v_x.pop("Position").to_numpy()
+   # v_x = v_x.to_numpy()
 
     model = tf.keras.models.Sequential([
         keras.layers.Reshape((50,8), input_shape=(400,)),
@@ -73,11 +73,11 @@ def Train(pair ,epochs, restore:bool, save:bool):
     print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
 
     print("Fitting")
-    history = model.fit(x = trainingDataset, y =trainingLabels , epochs=epochs, callbacks=[cp_callback, lr_callback], validation_data=(v_x,v_y))
+    history = model.fit(x = trainingDataset, y =trainingLabels , epochs=epochs, callbacks=[cp_callback, lr_callback] ) #validation_data=(v_x,v_y))
 
     # summarize history for accuracy
     plt.plot(history.history['accuracy'])
-    plt.plot(history.history['val_accuracy'])
+    #plt.plot(history.history['val_accuracy'])
     plt.title('model accuracy')
     plt.ylabel('accuracy')
     plt.xlabel('epoch')
@@ -85,14 +85,14 @@ def Train(pair ,epochs, restore:bool, save:bool):
     plt.show()
     # summarize history for loss
     plt.plot(history.history['loss'])
-    plt.plot(history.history['val_loss'])
+    #plt.plot(history.history['val_loss'])
     plt.title('model loss')
     plt.ylabel('loss')
     plt.xlabel('epoch')
     plt.legend(['train', 'test'], loc='upper left')
     plt.show()
     
-    print(model.evaluate(v_x,v_y))
+    # print(model.evaluate(v_x,v_y))
 
     if save:
         tf.keras.models.save_model(
@@ -103,4 +103,4 @@ def Train(pair ,epochs, restore:bool, save:bool):
 
 
 if __name__ == '__main__':
-    Train("BTCUSDT", 50, True, True)
+    Train("LINKUSDT", 150, True, True)

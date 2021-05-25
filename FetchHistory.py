@@ -4,9 +4,7 @@ if __name__ == "__main__":
     import Client.marketData as marketData
 
     # Training target
-    pair = "BTCUSDT"
-    tp = 0.25
-    sl = 0.2
+    pair = "LINKUSDT"
 
     # Time to nanoseconds
     timeframe = "1m"
