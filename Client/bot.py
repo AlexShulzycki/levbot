@@ -58,9 +58,9 @@ class bot():
         print(datetime.now())
         prediction = self.predict()  # The last price is updated inside
 
-        # Calculate size of potential position (two bucks for now) TODO implement position sizing
-        amount = 2*self.lev / self.lastprice  # Dollar amount * Leverage / Last price
-
+        # Calculate size of potential position (two bucks for now) TODO Implement position sizing
+        amount = (2 * self.lev) / self.lastprice  # Dollar amount * Leverage / Last price
+        print(self.bridge.ticker, self.lastprice, self.lev, amount)
 
         if (self.cooldown > 0):
             self.cooldown -= 1

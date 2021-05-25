@@ -1,4 +1,4 @@
 Pair, Take Profit (NOT in percent), Stop Loss (NOT in percent), Leverage amount, Binance futures price precision (decimals after the dot), Amount precision
-BTCUSDT, 0.03, 0.02, 125, 3, 2
+BTCUSDT, 0.03, 0.02, 125, 2, 3
 ADAUSDT, 0.06, 0.02, 75, 4, 0
 LINKUSDT, 0.05, 0.02, 75, 2, 2
