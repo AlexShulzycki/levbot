@@ -83,16 +83,33 @@ class MyServer(BaseHTTPRequestHandler):
         # Close body and html tags
         self.wfile.write(bytes("</body></html>", "utf-8"))
 
+def initializeBots():
+
+    # Read data from config file
+    import csv
+    with open("config.csv") as csvfile:
+        data = list(csv.reader(csvfile))
+
+    # Remove the first row containing column headers
+    data.pop(0)
+
+    # Now that we have the configuration data, we can initialize the bots
+    models = os.listdir("models")
+    for x in data:
+        # Check if tflite model exists in the models folder
+        if x[0]+".tflite" in models:
+            # Model exists, initialize the bot
+            bots.append(bot.bot(x[0], float(x[1]), float(x[2]), float(x[3])))
+        else:
+            print(x[0]+" does not have a .tflite model, skipping.")
+
 
 if __name__ == "__main__":
 
     # Detect models we can use
     import os
+    initializeBots()
 
-    print("Bots available:")
-    for x in os.listdir("models"):
-        print(x[0:-7])
-        bots.append(bot.bot(x[0:-7]))
 
     webServer = HTTPServer((hostName, serverPort), MyServer)
     print("Server started http://%s:%s" % (hostName, serverPort))
