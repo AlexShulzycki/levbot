@@ -124,7 +124,7 @@ class bot():
 
     # Init
     def __init__(self, ticker, tp, sl, leverage):
-        print("Bot Created")
+        print(ticker+" Bot Created")
 
         # Take profit, stop loss, leverage
         self.tp = tp
@@ -132,7 +132,7 @@ class bot():
         self.lev = leverage
 
         # Import API keys
-        f = open("../Data/API.txt", "r")
+        f = open("API.txt", "r")
         self.api_key = f.readline().rstrip()
         self.api_secret = f.readline().rstrip()
         f.close()
@@ -150,5 +150,7 @@ class bot():
         # Create bridge
         self.bridge = bridge.bridge(self.url, self.ticker)
 
-        # Bot does not run by default
+        # Bot is not running yet
         self.Running = False
+        # Start the bot immediately
+        self.start()

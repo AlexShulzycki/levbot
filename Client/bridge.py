@@ -65,13 +65,15 @@ class bridge():
 
         headers = {"Content-type": "application/x-www-form-urlencoded", "X-MBX-APIKEY": self.api_key}
 
-        # Sanitize inputs
-        tp = str(tp)[0:7]
-        sl = str(sl)[0:7]
+        # Make sure the tp/sl strings are not too long
+        tp = (str(tp)[:7]) if len(str(tp)) > 7 else str(tp)
+        sl = (str(sl)[:7]) if len(str(sl)) > 7 else str(sl)
+
+        # Format the quantity to 3 decimal precision
         quantity = "{:.3f}".format(quantity)
 
         # Debug
-        print(side, quantity)
+        print(self.ticker, side, quantity)
 
         def send(querystring):
 
@@ -94,12 +96,16 @@ class bridge():
             side = "BUY"
 
         # Take profit
-        querystring = "symbol="+self.ticker+"&side=" + side + "&reduceOnly=true&type=TRAILING_STOP_MARKET&callbackRate=0.12&quantity=" + quantity + "&activationPrice=" + tp
-        self.orders.append(json.loads(send(querystring))["orderId"])
+        querystring = "symbol="+self.ticker+"&side=" + side + "&reduceOnly=true&type=TAKE_PROFIT&quantity=" + quantity + "&stopPrice=" + tp+"&price="+tp
+        res = json.loads(send(querystring))
+        print(res)
+        self.orders.append(["orderId"])
 
         # Stop loss
         querystring = "symbol="+self.ticker+"&side=" + side + "&reduceOnly=true&type=STOP_MARKET&quantity=" + quantity + "&stopPrice=" + sl
-        self.orders.append(json.loads(send(querystring))["orderId"])
+        res = json.loads(send(querystring))
+        print(res)
+        self.orders.append(["orderId"])
 
         return
 
@@ -109,7 +115,7 @@ class bridge():
         self.ticker = ticker
 
         # Import API keys
-        f = open("../Data/API.txt", "r")
+        f = open("API.txt", "r")
         self.api_key = f.readline().rstrip()
         self.api_secret = f.readline().rstrip()
         f.close()
