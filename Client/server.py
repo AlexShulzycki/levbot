@@ -2,7 +2,7 @@
 
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-from Client import bot
+import bot
 
 hostName = "localhost"
 serverPort = 8080

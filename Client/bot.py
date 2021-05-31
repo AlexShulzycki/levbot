@@ -5,7 +5,7 @@ from datetime import datetime
 import numpy as np
 import tflite_runtime.interpreter as tflite
 
-from Client import marketData, Indicators, bridge, Preprocess
+import marketData, Indicators, bridge, Preprocess
 
 
 class bot():
