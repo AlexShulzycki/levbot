@@ -106,7 +106,7 @@ class bot():
 
             time.sleep(waitTime.seconds)
             self.tick()
-        print("Schedule finished, exiting now.")
+        print(self.ticker+" bot stopped.")
 
     # Start bot schedule thread
     def start(self):
@@ -136,7 +136,8 @@ class bot():
         self.api_key = f.readline().rstrip()
         self.api_secret = f.readline().rstrip()
         f.close()
-        self.url = "http://testnet.binancefuture.com"
+        # self.url = "http://testnet.binancefuture.com"
+        self.url = "http://fapi.binance.com"
 
         # Init last price var
         self.lastprice = 0

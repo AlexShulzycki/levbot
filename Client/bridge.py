@@ -94,7 +94,7 @@ class bridge():
             side = "BUY"
 
         # Take profit
-        querystring = "symbol="+self.ticker+"&side=" + side + "&reduceOnly=true&type=TAKE_PROFIT&quantity=" + quantity + "&stopPrice=" + tp+"&price="+tp
+        querystring = "symbol="+self.ticker+"&side=" + side + "&reduceOnly=true&type=TRAILING_STOP_MARKET&quantity=" + quantity + "&activationPrice=" + tp+"&callbackRate="+ str(0.1)
         res = json.loads(send(querystring))
         print(res)
         self.orders.append(res["orderId"])
