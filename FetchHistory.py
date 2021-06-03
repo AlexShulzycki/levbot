@@ -1,41 +1,58 @@
+import math
+
 if __name__ == "__main__":
     import time
+    import numpy
     import Client.Indicators as Indicators
     import Client.marketData as marketData
+
+    #How far back you want to go
+    amount = 20
 
     # Training target
     pair = "LINKUSDT"
 
-    # Time to nanoseconds
-    timeframe = "1m"
-    current = time.time() * 1000
-    current = round(current)
 
-    # Time step for requests
-    block = 500 * 60 * 1000
-    current -= block
-    amount = 500
+    def fetch(timeframe, amount):
 
-    # Populating latest
-    df = marketData.getPrices(pair, timeframe, 500)
-    for i in range(0, amount):
-        print(str(str(i) + "/"+ str(amount)))
-        df = df.append(marketData.getHistorical(pair, timeframe, current - block, current))
+        # Time to nanoseconds
+        current = time.time() * 1000
+        current = round(current)
+
+        # Time step for requests
+        block = 500 * 60 * 1000
         current -= block
 
-    df = df.sort_index()
-    print("Done fetching")
+        # Populating latest
+        df = marketData.getPrices(pair, timeframe, 500)
+        for i in range(0, amount):
+            print(str(str(i) + "/"+ str(amount)))
+            df = df.append(marketData.getHistorical(pair, timeframe, current - block, current))
+            current -= block
 
-    df = Indicators.Stochastic(df)
-    df = Indicators.ADX(df)
+        df = df.sort_index()
+        print("Done fetching")
 
-    # Truncate unusable data
-    df = df.iloc[27:]
+        df = Indicators.Stochastic(df)
+        df = Indicators.ADX(df)
 
-    print("Indicators added")
+        # Truncate unusable data
+        df = df.iloc[27:]
 
-    # Save fetched data
-    df.to_csv("Data/" + pair +"/"+ "history.csv")
+        print("Indicators added")
+
+        # Set datetime to millis
+        df = df.reset_index() # we have to unset, modify, and then reset the index column.
+        df["Time"] = df["Time"].astype(numpy.int64) / int(1e6)
+        df.set_index("Time", inplace=True)
+
+
+        # Save fetched data
+        df.to_csv("Data/" + pair +"/"+ timeframe + "history.csv")
+
+    # Get 1m
+    fetch("1m", amount)
+    fetch("15m", amount+50)
 
     print("History data saved")
 

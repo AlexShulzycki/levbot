@@ -46,7 +46,7 @@ class bot():
         prediction = prediction[0].tolist()
 
         # 0 for none, 1 for short, 2 for long.
-        print("Neutral: " + str(prediction[0]) + " Long: " + str(prediction[1]) + " Short: " + str(prediction[2]))
+        print(self.ticker, "- Neutral: " + str(prediction[0]) + " Long: " + str(prediction[1]) + " Short: " + str(prediction[2]))
 
         # Return prediction
         return prediction.index(max(prediction))
@@ -60,7 +60,6 @@ class bot():
 
         # Calculate size of potential position (two bucks for now) TODO Implement position sizing
         amount = (2 * self.lev) / self.lastprice  # Dollar amount * Leverage / Last price
-        print(self.bridge.ticker, self.lastprice, self.lev, amount)
 
         if (self.cooldown > 0):
             self.cooldown -= 1

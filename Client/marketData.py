@@ -1,7 +1,6 @@
 import requests
 import pandas
 import json
-from talib.abstract import *
 
 
 def api(url, payload):
