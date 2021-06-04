@@ -116,4 +116,4 @@ def Train(pair ,epochs, restore:bool, save:bool):
 
 if __name__ == '__main__':
     # epochs, load checkpoints, save model
-    Train("BTCUSDT", 30, True, True)
+    Train("LINKUSDT", 10, True, True)
