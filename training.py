@@ -103,4 +103,5 @@ def Train(pair ,epochs, restore:bool, save:bool):
 
 
 if __name__ == '__main__':
-    Train("LINKUSDT", 150, True, True)
+    # epochs, load checkpoints, save model
+    Train("LINKUSDT", 1, True, True)
