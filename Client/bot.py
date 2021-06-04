@@ -3,6 +3,7 @@ import time
 from datetime import datetime
 
 import numpy as np
+import pandas
 import tflite_runtime.interpreter as tflite
 
 import marketData, Indicators, bridge, Preprocess
@@ -13,23 +14,32 @@ class bot():
     def predict(self):
 
         # Fetch data
-        df = marketData.getPrices(self.ticker, "1m", 77)
+        df1m = marketData.getPrices(self.ticker, "1m", 77)
+        df1h = marketData.getPrices(self.ticker, "1h", 77)
 
         # Calculate indicators
-        df = Indicators.Stochastic(df)
-        df = Indicators.ADX(df)
+        df1m = Indicators.Stochastic(df1m)
+        df1h = Indicators.Stochastic(df1h)
+        df1m = Indicators.ADX(df1m)
+        df1h = Indicators.ADX(df1h)
 
         # Truncate unusable data
-        df = df.iloc[27:]
+        df1m = df1m.iloc[27:]
+        df1h = df1h.iloc[27:]
 
         # Set last price
-        self.lastprice = df["Close"][49].item() # .item() turns numpy64 to a regular float
+        self.lastprice = df1m["Close"][49].item() # .item() turns numpy64 to a regular float
+
 
 
         # Preprocess data into a numpy array
-        inputs = np.array(Preprocess.prepare(df))
+        input1m = np.array(Preprocess.prepare(df1m))
+        input1h = np.array(Preprocess.prepare(df1h))
+        # Join
+        inputs = np.append(input1m, input1h)
+
         # Reshape array for tensor input
-        inputs = inputs.reshape(1, 400).astype("float32")
+        inputs = inputs.reshape(1, 800).astype("float32")
 
         # Get input/output tensors
         in_det = self.interpreter.get_input_details()
