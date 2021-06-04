@@ -19,21 +19,21 @@ def Train(pair ,epochs, restore:bool, save:bool):
    # v_x = v_x.to_numpy()
 
     model = tf.keras.models.Sequential([
-        keras.layers.Reshape((50,8), input_shape=(400,)),
+        keras.layers.Reshape((100,8), input_shape=(800,)),
         keras.layers.LayerNormalization(axis=1),
-        keras.layers.Conv1D(80, 3),
+        keras.layers.Conv1D(160, 3),
         keras.layers.MaxPool1D(),
-        keras.layers.Conv1D(80, 3),
+        keras.layers.Conv1D(160, 3),
         keras.layers.MaxPool1D(),
-        keras.layers.Conv1D(80, 3),
+        keras.layers.Conv1D(160, 3),
         keras.layers.MaxPool1D(),
-        keras.layers.Conv1D(80, 3),
+        keras.layers.Conv1D(160, 3),
         keras.layers.MaxPool1D(),
 
 
         keras.layers.Dropout(0.01),
 
-        keras.layers.Flatten(input_shape=(40,8)),
+        keras.layers.Flatten(input_shape=(80,8)),
 
         keras.layers.Dense(160),
         keras.layers.Dense(160),

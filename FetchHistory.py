@@ -7,7 +7,7 @@ if __name__ == "__main__":
     import Client.marketData as marketData
 
     #How far back you want to go
-    amount = 20
+    amount = 500
 
     # Training target
     pair = "LINKUSDT"
@@ -52,7 +52,7 @@ if __name__ == "__main__":
 
     # Get 1m
     fetch("1m", amount)
-    fetch("15m", amount+50)
+    fetch("1h", amount+50)
 
     print("History data saved")
 
