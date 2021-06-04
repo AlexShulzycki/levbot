@@ -101,7 +101,19 @@ def Train(pair ,epochs, restore:bool, save:bool):
             save_format='tf'
         )
 
+        # Save as tflite model
+        # Convert the model
+        converter = tf.lite.TFLiteConverter.from_saved_model("model/" + pair)  # path to the SavedModel directory
+        tflite_model = converter.convert()
+
+        print(pair + " converted")
+
+        # Save the model.
+        with open('Client/models/' + pair + '.tflite', 'wb') as f:
+            f.write(tflite_model)
+            f.close()
+
 
 if __name__ == '__main__':
     # epochs, load checkpoints, save model
-    Train("LINKUSDT", 1, True, True)
+    Train("BTCUSDT", 30, True, True)
