@@ -10,7 +10,7 @@ if __name__ == "__main__":
     amount = 500
 
     # Training target
-    pair = "BTCUSDT"
+    pair = "ATOMUSDT"
 
 
     def fetch(timeframe, amount):
