@@ -10,7 +10,7 @@ to efficiently go over the data and decide at each point in time whether taking 
 
 ## How it runs
 The bot is actually several bots operating on a different currency pair. When server.py (in /Client) is run, a http server is started which initializes all the 
-bots (class /Client/bot.py) with their respective settings and currency pair TensorFlow Lite models. Then every minute new price data is pulled, from which 
+bots (class /Client/bot.py) with their respective settings and currency pair TensorFlow Lite models (/Client/config.csv). Then every minute new price data is pulled, from which 
 a decision is made by each model whether or not a trade could be made. If a trade should be made, the trade is made via the Binance API (via /Client/bridge.py).
 
 It is possible to run this on a Raspberry Pi.
