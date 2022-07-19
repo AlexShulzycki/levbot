@@ -2,11 +2,10 @@
 Utterly useless trading bot that tries to throw TensorFlow at the complexities of cryptocurrency prices with predictable results.
 
 ## What is the idea?
-The name stems from leverage bot, as Binance futures allows you to trade with 125x leverage on some cryptos. The idea is to just predict whether the price will go
-up or down within the next few minutes, and 125x leverage a few bucks ando get filthy rich over time. That obviously does not work, but it was fun to build.
+The name stems from leverage bot, as Binance futures allows you to trade with 125x leverage on some cryptos. The idea is to just predict whether the price will go up or down within the next few minutes, and 125x leverage a few bucks and get filthy rich over time. That obviously does not work, but it was fun to build.
 
 ## How it rougly works
-The TensorFlow model is trained on historical data using both 15 and 1 minute timeframes. The data is fetched from Binance, reformatted, and then Java is used
+The TensorFlow model is trained on historical data using both 15 and 1 minute timeframes. The data is fetched from Binance, reformatted, and then Java (GenerateDataV2.java) is used
 to efficiently go over the data and decide at each point in time whether taking a trade is favorable or not. A model is then trained on that data.
 
 ## How it runs
