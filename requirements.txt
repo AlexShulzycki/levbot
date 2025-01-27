@@ -3,4 +3,7 @@ matplotlib
 mplfinance
 pandas
 requests
-TA-Lib
+temporian
+binance-connector
+ta-lib
+tqdm
