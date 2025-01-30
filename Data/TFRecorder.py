@@ -25,6 +25,7 @@ def labelKlines(df: pd.DataFrame)-> tp.event_set:
 
 
 class coinRecordGenerator:
+    # TODO UNDO TIMEFRAME COLLATION, ONE TFRECORD FOR ONE TIMEFRAME UNLESS YOU CAN SEPARATE OUT TO DIFFERENT TFRECORDS
     def __init__(self, coin: str, datalocation: str = "Data/raw", savelocation: str = "Data/tfrecords", savename ="test"):
         """
         Handles the saving of each coin to tfrecords
