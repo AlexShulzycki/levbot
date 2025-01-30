@@ -1,3 +1,6 @@
+import shutil
+from tabnanny import verbose
+
 import requests
 import datetime
 import time
@@ -16,49 +19,6 @@ def coinDirURL(coin: str, timeframe: str) -> str:
     return f"{baseurl + coin}USD_PERP/{timeframe}/"
 
 
-
-
-def unzipall(coins):
-    import shutil
-    for coin in coins:
-        for file in tqdm(os.listdir(coin + "/zipped")):
-            finaldirectory = coin + "/csv/" + file.split("-")[0]
-            print(finaldirectory)
-            try:
-                os.makedirs(finaldirectory)
-            except FileExistsError:
-                # directory already exists
-                pass
-            if file.endswith(".zip"):
-                shutil.unpack_archive(coin + "/zipped/" + file, finaldirectory)
-
-
-def downloadZipsForTimeframe(coin, timeframe):
-    try:
-        filenames = getAvailable(coin, timeframe)
-        timeframes = []
-        for filename in filenames:
-            timeframes.append(timeframe)
-
-        with ThreadPoolExecutor() as executor:
-            executor.map(dwnld, filenames, timeframes)
-    except Exception as e:
-        print(e)
-
-
-def downloadhistorical(coins, timeframes):
-    from concurrent.futures import ThreadPoolExecutor
-
-    with ThreadPoolExecutor() as executor:
-        for coin in coins:
-            # Create an equivalent array of just the coin for the map
-            coinplural = []
-            for timeframe in timeframes:
-                coinplural.append(coin)
-            executor.map(downloadZipsForTimeframe, coinplural, timeframes)
-    unzipall(coins)
-
-
 class Downloader:
 
     def __init__(self, onlinedirectoryurl: str, savefolder: str):
@@ -67,7 +27,9 @@ class Downloader:
         :param onlinedirectoryurl: https(...)/markPriceKlines/AAVEUSD_PERP/1d/
         :param savefolder: folder where to save the files
         """
+        """Folder of the online URL, contains / at the end"""
         self.urlfolder = onlinedirectoryurl
+        """Local save folder location, contains / at the end"""
         self.savefolder = savefolder
 
         # make sure the savefolder has a final slash
@@ -79,17 +41,29 @@ class Downloader:
 
         # Extract info from URL
         urlsplit = self.urlfolder.split("/")
-        self.timeframe = urlsplit[-1]
-        self.coin = urlsplit[-2]
+        self.coin = urlsplit[-3]
+        self.datatype = urlsplit[-4]
+        self.timeframe = urlsplit[-2]
 
         # If save folder does not exist, make it
         try:
-            os.makedirs(self.savefolder)
+            os.makedirs(self.savefolder+"zipped/")
+            os.makedirs(self.savefolder + "csv/")
         except FileExistsError:
             # directory already exists, nothing to do
             pass
 
-    def getAvailable(self) -> list:
+        # Run the magic
+        #self.Download(self.getAvailable())
+
+    def Download(self, urls):
+        pbar = tqdm(total=len(urls), desc=f"Downloading {len(urls)} files from {self.urlfolder}", leave=False)
+        with ThreadPoolExecutor() as executor:
+            for url in urls:
+                executor.submit(self.downloadAndUnzip, url, pbar)
+        pbar.close()
+
+    def getAvailable(self, verbose = False) -> list:
         """
          Get filenames that can be downloaded, by counting down chronologically from the current time
 
@@ -99,6 +73,9 @@ class Downloader:
 
         fileprefix = f"{self.urlfolder}{self.coin}-{self.timeframe}"
 
+        if verbose:
+            pbar = tqdm(desc=f"Checking for files in {self.urlfolder}", leave=False)
+            pbar.update(0)
         result = []
         while True:  # infinite loop until we break
             time.sleep(0.05)
@@ -113,24 +90,32 @@ class Downloader:
 
             # Send the request
             res = requests.head(fileurl)
-            print(f"{year} - {month}, response {res.status_code}")
+
+            if verbose:
+                pbar.set_description(f"{year} - {month}, response {res.status_code}")
+                pbar.refresh()
 
             # Check if it exists
             if res.status_code != 200:
                 # Does not exist, no more data, return what we have
+                if verbose:
+                    pbar.close()
                 return result
             else:
+                if verbose:
+                    pbar.update(1)
                 # Append to results
                 result.append(fileurl)
 
-    def downloadOneFile(self, fileurl, pbar):
+
+    def downloadAndUnzip(self, fileurl, pbar = None):
         """
 
         :param fileurl: complete file url to download, file extension included
         :param pbar: TQDM progress bar, will call update() on completion
         :return: nothing :)
         """
-        # Generate filename
+        # Generate filename from file url
         filename = fileurl.split("/")[-1]
 
         # request!
@@ -139,14 +124,52 @@ class Downloader:
         if response.status_code != 200:
             print("Error downloading " + "filename")
 
+        # Download the file and unzip it
         try:
-            with open(self.savefolder + filename, mode="wb") as file:
+            ziplocation = self.savefolder + "zipped/" +filename
+            with open(ziplocation, mode="wb") as file:
                 file.write(response.content)
                 file.close()
+            shutil.unpack_archive(ziplocation, self.savefolder + "csv/")
+            print("saved "+filename)
         except Exception as e:
             print(e)
 
-        pbar.update(1)
+        # Update progress bar if we got one
+        if pbar is not None:
+            pbar.update(1)
 
 
 
+def bulkDataTypeCoinTimeframes(baseurl: str, datatypes: list, coins: list, timeframes: list, savedirectory:str):
+    """
+    TODO: Non functional, fix in the future sometime, threadpool executor more than one, write another class:)
+    Download timeframes from this url
+    :param baseurl: base url, i.e. https:/(...)/cm/monthly/
+    :param datatypes: list of datatypes, i.e. klines, whatever
+    :param coins: BTCUSD_PERP, AAVEUSD_PERP
+    :param timeframes: 1m, 5m, etc
+    :param savedirectory: folder where to save the files
+    :return: nothing
+    """
+    # make sure the url and folder has a final slash
+    if baseurl[-1] != '/':
+        baseurl += "/"
+    if savedirectory[-1] != '/':
+        savedirectory += "/"
+
+
+    with ThreadPoolExecutor() as executor:
+        for datatype in datatypes:
+            for coin in tqdm(coins):
+                coinurl = f"{baseurl}{datatype}/{coin}/"
+                for timeframe in timeframes:
+                    coinurl = f"{coinurl}{timeframe}/"
+                    dwnld = Downloader(coinurl, f"{savedirectory}{coin}/{datatype}/{timeframe}/")
+                    available = dwnld.getAvailable(verbose = True)
+
+                    pbarinner = tqdm(total=len(available), desc=f"{datatype} {timeframe}", leave=False)
+                    pbarinnerplural = []
+                    for av in available:
+                        pbarinnerplural.append(pbarinner)
+                    executor.map(dwnld.Download, available, pbarinnerplural)
