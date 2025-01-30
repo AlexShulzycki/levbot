@@ -56,14 +56,26 @@ class Downloader:
         # Run the magic
         #self.Download(self.getAvailable())
 
-    def Download(self, urls):
-        pbar = tqdm(total=len(urls), desc=f"Downloading {len(urls)} files from {self.urlfolder}", leave=False)
+    def downloadAll(self, urls, pbar = None):
+        """
+        Downloads all URLs
+        :param urls: URLs to download
+        :param pbar: Progress bar to use
+        :return:
+        """
+        if pbar is not None:
+            # Update pbar
+            pbar.reset(total=len(available))
+            pbar.set_postfix(None)
+            pbar.set_description(f"{timeframe}: Downloading")
+            pbar.unit = "file"
+            pbar.refresh()
+
         with ThreadPoolExecutor() as executor:
             for url in urls:
                 executor.submit(self.downloadAndUnzip, url, pbar)
-        pbar.close()
 
-    def getAvailable(self, verbose = False) -> list:
+    def getAvailable(self, pbar = None) -> list:
         """
          Get filenames that can be downloaded, by counting down chronologically from the current time
 
@@ -73,9 +85,6 @@ class Downloader:
 
         fileprefix = f"{self.urlfolder}{self.coin}-{self.timeframe}"
 
-        if verbose:
-            pbar = tqdm(desc=f"Checking for files in {self.urlfolder}", leave=False)
-            pbar.update(0)
         result = []
         while True:  # infinite loop until we break
             time.sleep(0.05)
@@ -91,18 +100,16 @@ class Downloader:
             # Send the request
             res = requests.head(fileurl)
 
-            if verbose:
-                pbar.set_description(f"{year} - {month}, response {res.status_code}")
+            if pbar is not None:
+                pbar.set_postfix(f"{year} - {month}, response {res.status_code}")
                 pbar.refresh()
 
             # Check if it exists
             if res.status_code != 200:
                 # Does not exist, no more data, return what we have
-                if verbose:
-                    pbar.close()
                 return result
             else:
-                if verbose:
+                if pbar is not None:
                     pbar.update(1)
                 # Append to results
                 result.append(fileurl)
@@ -123,6 +130,10 @@ class Downloader:
 
         if response.status_code != 200:
             print("Error downloading " + "filename")
+            if pbar is not None:
+                pbar.set_postfix(f"Error getting {filename}")
+                pbar.update(1)
+            return
 
         # Download the file and unzip it
         try:
@@ -132,12 +143,87 @@ class Downloader:
                 file.close()
             shutil.unpack_archive(ziplocation, self.savefolder + "csv/")
             print("saved "+filename)
+            # Update progress bar if we got one
+            if pbar is not None:
+                pbar.set_postfix(f"Downloaded {filename}")
+                pbar.update(1)
         except Exception as e:
             print(e)
+            # Update progress bar if we got one
+            if pbar is not None:
+                pbar.set_postfix(f"Error downloading {filename}")
+                pbar.update(1)
 
-        # Update progress bar if we got one
+
+
+
+class CoinDownloader:
+    def __init__(self, baseurl: str, coin: str, savefolder: str):
+        """
+
+        :param baseurl: https://data.binance.vision/data/futures/cm/monthly/
+        :param coin: AAVEUSD_PERP
+        :param savefolder: root folder where to save the coin
+        """
+        """Folder of the online URL, contains / at the end"""
+        self.baseurl = baseurl
+        """Local save folder location, contains / at the end"""
+        self.savefolder = savefolder
+
+        self.coin = coin # BTCUSD_PERP or something like that
+
+        # make sure the savefolder has a final slash
+        if self.savefolder[-1] != '/':
+            self.savefolder += "/"
+        # make sure the onlinedirectory has a final slash
+        if self.baseurl[-1] != '/':
+            self.baseurl += "/"
+
+
+    # URL EXAMPLE: https://data.binance.vision/data/futures/cm/monthly/klines/AAVEUSD_PERP/1h/
+
+    def getDataTypeUrl(self, datatype: str) -> str:
+        return f"{self.baseurl}{datatype}/{self.coin}/"
+
+    def getTimeframeUrl(self, datatype: str, timeframe: str) -> str:
+        return f"{self.getDataTypeUrl(datatype)}{timeframe}/"
+
+    def downloadTimeframe(self, datatype: str, timeframe: str, pbar: tqdm = None):
+        """
+        Downloads data from timeframe for given datatype
+        :param pbar:
+        :param datatype: klines
+        :param timeframe: 1m
+        :return: nothing
+        """
+        # Set up folders
+        folder = f"{self.savefolder}{self.coin}/{datatype}/{self.timeframe}/"
+        url = self.getTimeframeUrl(datatype, timeframe)
+
+        # Set up downloader and get available
+        downloader = Downloader(url, folder)
+
         if pbar is not None:
-            pbar.update(1)
+            pbar = tqdm(desc=f"{timeframe}: Checking available data", unit="response")
+        else:
+            pbar.unit = "response"
+            pbar.set_description(f"{timeframe}: Checking available data")
+
+        available = downloader.getAvailable(pbar)
+
+        # Download
+        downloader.downloadAll(available, pbar)
+        pbar.close()
+
+    def downloadAllTimeframes(self, datatypes: list, timeframes: list):
+        """
+        Downloads all timeframes and datatypes for this coin
+        :param datatypes:
+        :param timeframes:
+        :return:
+        """
+
+        pbar = tqdm(desc=self.coin, unit="response")
 
 
 
