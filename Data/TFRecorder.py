@@ -42,7 +42,26 @@ class coinRecordGenerator:
         if self.savename[-1] != '/':
             self.savename += "/"
 
-        self.evset = tp.event_set()
+        self.evset = None
+
+    def addToEvset(self, evset: tp.event_set):
+        """
+        Adds to the self.evset if it exists, otherwise self.evset = evset. Must have Timeframe as index and a timestamp.
+        :param evset: evset to add to the main evset
+        :return: nothing :)
+        """
+        if self.evset is None:
+            self.evset = evset
+            return
+
+        # Check if features exists already
+        for feature in evset.schema.features:
+            if feature in self.evset.schema.features:
+                self.evset = tp.combine(self.evset, evset)
+                return
+
+        # Otherwise, join
+        self.evset = self.evset.join(evset)
 
     def loadData(self, datatype: str, timeframe: str) -> tp.event_set:
         """
@@ -52,12 +71,12 @@ class coinRecordGenerator:
         :return: eventset
         """
 
-        folder = f"{self.datalocation}{self.coin}/{datatype}/{timeframe}/"
+        folder = f"{self.datalocation}{self.coin}/{datatype}/{timeframe}/csv/"
         """CSV file(s) location"""
 
         evsets = []
 
-        for file in tqdm(os.listdir(folder+"csv")):
+        for file in tqdm(os.listdir(folder)):
 
             # Try to read in the file
             if file.endswith(".csv"):
@@ -67,7 +86,7 @@ class coinRecordGenerator:
 
             # Label / drop axes depending on datatype
             match datatype:
-                case 'kline':
+                case 'klines':
                     df = labelKlines(df)
                 case _:
                     raise Exception("UNKNOWN DATATYPE "+datatype)
@@ -81,7 +100,9 @@ class coinRecordGenerator:
             evsets.append(tp.from_pandas(df, timestamps="timestamp", indexes=["Timeframe"]))
 
         # Return combined event set
-        evset = tp.combine(*evsets)
+        combined = tp.combine(*evsets)
+        self.addToEvset(combined)
+        return combined
 
     def engineerFeatures(self):
         # do something to self.evset
