@@ -236,7 +236,7 @@ class CoinDownloader:
             pbar.update(1)
 
 
-def bulkCoinDatatypeTimeframe(coins: list, datatypes: list, timeframes: list, savefolder: str = "Data", baseurl = "https://data.binance.vision/data/futures/cm/monthly/"):
+def bulkCoinDatatypeTimeframe(coins: list, datatypes: list, timeframes: list, savefolder: str = "Data/raw", baseurl = "https://data.binance.vision/data/futures/cm/monthly/"):
     """
     Bulk download of given coins
     :param coins: ["BTCUSD_PERP"]

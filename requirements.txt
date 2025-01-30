@@ -6,3 +6,4 @@ pandas
 requests
 temporian>=0.9
 tqdm
+tensorflow
