@@ -3,5 +3,5 @@
   <component name="Black">
     <option name="sdkName" value="Python 3.12 (levbot)" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.10.12 WSL (Ubuntu): (/home/alexshulzycki/.virtualenvs/levbot/bin/python)" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.12.3 WSL (Ubuntu): (/root/.virtualenvs/levbot/bin/python)" project-jdk-type="Python SDK" />
 </project>

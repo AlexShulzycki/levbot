@@ -65,10 +65,8 @@ class Downloader:
         """
         if pbar is not None:
             # Update pbar
-            pbar.reset(total=len(available))
-            pbar.set_postfix(None)
-            pbar.set_description(f"{timeframe}: Downloading")
-            pbar.unit = "file"
+            pbar.reset(total=len(urls))
+            pbar.unit = " file"
             pbar.refresh()
 
         with ThreadPoolExecutor() as executor:
@@ -101,7 +99,7 @@ class Downloader:
             res = requests.head(fileurl)
 
             if pbar is not None:
-                pbar.set_postfix(f"{year} - {month}, response {res.status_code}")
+                pbar.set_postfix_str(f"{year} - {month}, response {res.status_code}")
                 pbar.refresh()
 
             # Check if it exists
@@ -131,7 +129,7 @@ class Downloader:
         if response.status_code != 200:
             print("Error downloading " + "filename")
             if pbar is not None:
-                pbar.set_postfix(f"Error getting {filename}")
+                pbar.set_postfix_str(f"Error getting {filename}")
                 pbar.update(1)
             return
 
@@ -142,16 +140,17 @@ class Downloader:
                 file.write(response.content)
                 file.close()
             shutil.unpack_archive(ziplocation, self.savefolder + "csv/")
-            print("saved "+filename)
             # Update progress bar if we got one
             if pbar is not None:
-                pbar.set_postfix(f"Downloaded {filename}")
+                pbar.set_postfix_str(f"Downloaded and unzipped {filename}")
                 pbar.update(1)
+            else:
+                print("Downloaded and unzipped"+filename)
         except Exception as e:
             print(e)
             # Update progress bar if we got one
             if pbar is not None:
-                pbar.set_postfix(f"Error downloading {filename}")
+                pbar.set_postfix_str(f"Error downloading {filename}")
                 pbar.update(1)
 
 
@@ -188,7 +187,7 @@ class CoinDownloader:
     def getTimeframeUrl(self, datatype: str, timeframe: str) -> str:
         return f"{self.getDataTypeUrl(datatype)}{timeframe}/"
 
-    def downloadTimeframe(self, datatype: str, timeframe: str, pbar: tqdm = None):
+    def downloadTimeFrame(self, datatype: str, timeframe: str, pbar: tqdm = None):
         """
         Downloads data from timeframe for given datatype
         :param pbar:
@@ -197,25 +196,30 @@ class CoinDownloader:
         :return: nothing
         """
         # Set up folders
-        folder = f"{self.savefolder}{self.coin}/{datatype}/{self.timeframe}/"
+        folder = f"{self.savefolder}{self.coin}/{datatype}/{timeframe}/"
         url = self.getTimeframeUrl(datatype, timeframe)
 
         # Set up downloader and get available
         downloader = Downloader(url, folder)
 
-        if pbar is not None:
-            pbar = tqdm(desc=f"{timeframe}: Checking available data", unit="response")
+        if pbar is None:
+            pbar = tqdm(desc=f"{timeframe}: Checking available data", unit=" response")
         else:
-            pbar.unit = "response"
+            pbar.unit = " response"
             pbar.set_description(f"{timeframe}: Checking available data")
+
 
         available = downloader.getAvailable(pbar)
 
         # Download
+        pbar.set_postfix_str("")
+        pbar.set_description(f"{self.coin}, {datatype}, {timeframe}: Downloading")
+        pbar.refresh()
+
         downloader.downloadAll(available, pbar)
         pbar.close()
 
-    def downloadAllTimeframes(self, datatypes: list, timeframes: list):
+    def downloadAllTimeframes(self, datatypes: list, timeframes: list, pbar = None):
         """
         Downloads all timeframes and datatypes for this coin
         :param datatypes:
@@ -223,39 +227,31 @@ class CoinDownloader:
         :return:
         """
 
-        pbar = tqdm(desc=self.coin, unit="response")
+        with ThreadPoolExecutor() as executor:
+            for datatype in datatypes:
+                for timeframe in timeframes:
+                    executor.submit(self.downloadTimeFrame, datatype, timeframe)
+
+        if pbar is not None:
+            pbar.update(1)
 
 
-
-def bulkDataTypeCoinTimeframes(baseurl: str, datatypes: list, coins: list, timeframes: list, savedirectory:str):
+def bulkCoinDatatypeTimeframe(coins: list, datatypes: list, timeframes: list, savefolder: str = "Data", baseurl = "https://data.binance.vision/data/futures/cm/monthly/"):
     """
-    TODO: Non functional, fix in the future sometime, threadpool executor more than one, write another class:)
-    Download timeframes from this url
-    :param baseurl: base url, i.e. https:/(...)/cm/monthly/
-    :param datatypes: list of datatypes, i.e. klines, whatever
-    :param coins: BTCUSD_PERP, AAVEUSD_PERP
-    :param timeframes: 1m, 5m, etc
-    :param savedirectory: folder where to save the files
-    :return: nothing
+    Bulk download of given coins
+    :param coins: ["BTCUSD_PERP"]
+    :param datatypes: ["klines", "premiumIndexKlines"]
+    :param timeframes: ["1m", "15m"]
+    :param savefolder: root folder where to save the coins
+    :param baseurl: https://data.binance.vision/data/futures/cm/monthly/
+    :return: check the folder :)
     """
-    # make sure the url and folder has a final slash
-    if baseurl[-1] != '/':
-        baseurl += "/"
-    if savedirectory[-1] != '/':
-        savedirectory += "/"
 
+    pbar = tqdm(desc="Bulk Downloading!", total=len(coins))
 
     with ThreadPoolExecutor() as executor:
-        for datatype in datatypes:
-            for coin in tqdm(coins):
-                coinurl = f"{baseurl}{datatype}/{coin}/"
-                for timeframe in timeframes:
-                    coinurl = f"{coinurl}{timeframe}/"
-                    dwnld = Downloader(coinurl, f"{savedirectory}{coin}/{datatype}/{timeframe}/")
-                    available = dwnld.getAvailable(verbose = True)
+        for coin in coins:
+            dwnld = CoinDownloader(baseurl, coin, savefolder)
+            executor.submit(dwnld.downloadAllTimeframes, datatypes, timeframes, pbar)
 
-                    pbarinner = tqdm(total=len(available), desc=f"{datatype} {timeframe}", leave=False)
-                    pbarinnerplural = []
-                    for av in available:
-                        pbarinnerplural.append(pbarinner)
-                    executor.map(dwnld.Download, available, pbarinnerplural)
+    pbar.close()
