@@ -5,7 +5,7 @@
       <excludeFolder url="file://$MODULE_DIR$/.venv" />
       <excludeFolder url="file://$MODULE_DIR$/Data" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.12.3 WSL (Ubuntu): (/root/.virtualenvs/levbot/bin/python)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="levbot" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="PackageRequirementsSettings">

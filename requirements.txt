@@ -1,8 +1,8 @@
-numpy
+numpy<2
 notebook
 ipywidgets
 matplotlib
 pandas
 requests
-temporian
+temporian>=0.9
 tqdm
