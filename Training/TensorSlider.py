@@ -37,8 +37,10 @@ class WindowSlider:
         self.otherindexes = {}
         """Dict of indexes where the most forward portion of the buffer is"""
 
-        self.returnNumpy = np.zeros((1 + len(self.others), len(self.features),  self.windowsize))
-        """Array for return values, timeframe, feature, window"""
+        self.returndatanumpy = np.zeros((1 + len(self.others), len(self.features),  self.windowsize))
+        """Array for data return values, timeframe, feature, window"""
+        self.returnlookaheadnumpy = np.zeros((self.lookforward + 1, len(self.features)))
+        """Array for lookahead return values, lookforward + current, features"""
 
     def stepToPresent(self, timestamp = None):
 
@@ -109,7 +111,7 @@ class WindowSlider:
             start = self.baseindex - self.windowsize -self.lookforward
             end = self.baseindex - self.lookforward
             # Assign the values
-            self.returnNumpy[0][j] = self.baseTensor[feature][start:end]
+            self.returndatanumpy[0][j] = self.baseTensor[feature][start:end]
 
         # Timeframe
         for i, (key, tensor) in enumerate(self.otherTensors.items()):
@@ -119,18 +121,20 @@ class WindowSlider:
                 start = self.otherindexes[key] - self.windowsize
                 end = self.otherindexes[key]
                 # Assign the values
-                self.returnNumpy[i+1][j] = tensor[feature][start:end] # plus 1 since 0 is the base timeframe
+                self.returndatanumpy[i+1][j] = tensor[feature][start:end] # plus 1 since 0 is the base timeframe
 
         reshape = (len(self.otherTensors) +1, self.windowsize, len(self.features))
-        reshape = self.returnNumpy.reshape(reshape)
-        data = tf.convert_to_tensor(self.returnNumpy)
+
+        # TODO Look into reshaping to timeframe, timestamp
+        #reshape = self.returnNumpy.reshape(reshape)
 
         # Return future prices
-        pricefromcurrent = self.baseTensor["Close"][self.baseindex - self.lookforward: self.baseindex+1]
+        for i, feature in enumerate(self.features):
+            self.returnlookaheadnumpy[:, i] = self.baseTensor[feature][self.baseindex - self.lookforward: self.baseindex + 1]
 
 
         # Move forward, synchronize all indexes
         self.baseindex += 1
         self.stepToPresent()
 
-        return [data, tf.convert_to_tensor(pricefromcurrent)]
+        return tf.convert_to_tensor(self.returndatanumpy), tf.convert_to_tensor(self.returnlookaheadnumpy)
