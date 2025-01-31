@@ -79,7 +79,7 @@ class WindowSlider:
         pass
 
 
-    def __iter__(self):
+    def init_from_zero(self):
         """
         Initializes the window slider from beginning
         """
@@ -102,8 +102,8 @@ class WindowSlider:
 
         return self
 
-    def __next__(self):
-        # Fill the response numpy array with data
+    def fillresponsearrays(self):
+        """ Fills the response numpy arrays with data"""
 
         # Fill in with base timeframe
         for j, feature in enumerate(self.features):
@@ -123,18 +123,40 @@ class WindowSlider:
                 # Assign the values
                 self.returndatanumpy[i+1][j] = tensor[feature][start:end] # plus 1 since 0 is the base timeframe
 
-        reshape = (len(self.otherTensors) +1, self.windowsize, len(self.features))
-
-        # TODO Look into reshaping to timeframe, timestamp
-        #reshape = self.returnNumpy.reshape(reshape)
-
-        # Return future prices
+        # Fill up future price response array (base timeframe only)
         for i, feature in enumerate(self.features):
-            self.returnlookaheadnumpy[:, i] = self.baseTensor[feature][self.baseindex - self.lookforward: self.baseindex + 1]
+            self.returnlookaheadnumpy[:, i] = self.baseTensor[feature][
+                                              self.baseindex - self.lookforward: self.baseindex + 1]
 
+    def slideTo(self, timestamp: int):
+        """
+        Slides the window to the given timestamp
+        :param timestamp: unix time to slide to (in seconds)
+        """
 
-        # Move forward, synchronize all indexes
+        currenttime = self.baseTensor["timestamp"][self.baseindex - self.lookforward]
+        """Current timestamp as is pointed to by the base timeframe"""
+        delta = timestamp - currenttime
+        """By how much we need to move"""
+
+        # Calculate step deltas for each timeframe to speed up moving
+
+        pass
+
+    def __iter__(self):
+        return self.init_from_zero()
+
+    def __next__(self):
+
+        # Synchronize all indexes
         self.baseindex += 1
         self.stepToPresent()
+
+        # fill up data response arrays
+        self.fillresponsearrays()
+
+        # TODO Look into reshaping to timeframe, timestamp
+        # reshape = self.returnNumpy.reshape(reshape)
+        reshape = (len(self.otherTensors) + 1, self.windowsize, len(self.features))
 
         return tf.convert_to_tensor(self.returndatanumpy), tf.convert_to_tensor(self.returnlookaheadnumpy)
