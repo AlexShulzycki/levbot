@@ -24,10 +24,25 @@ def labelKlines(df: pd.DataFrame)-> tp.event_set:
     return df
 
 
+
+def _float_feature(value):
+  """Returns a float_list from a float / double."""
+  return tf.train.Feature(float_list=tf.train.FloatList(value=value))
+
+def _int64_feature(value):
+  """Returns an int64_list from a bool / enum / int / uint."""
+  return tf.train.Feature(int64_list=tf.train.Int64List(value=value))
+
+def _bytes_feature(value):
+  """Returns an int64_list from a bool / enum / int / uint."""
+  return tf.train.Feature(bytes_list=tf.train.BytesList(value=value))
+
+
+
 class coinRecordGenerator:
-    def __init__(self, coin: str, datalocation: str = "Data/raw", savelocation: str = "Data/tfrecords", savename ="test"):
+    def __init__(self, coin: str, datalocation: str = "raw", savelocation: str = "tfrecords", savename ="test.tfrecord"):
         """
-        Handles the saving of each coin to tfrecords
+        Handles the saving of each coin to tfrecords, DONT COMBINE TIMEFRAMES
         """
         self.coin = coin
         self.datalocation = datalocation
@@ -109,20 +124,40 @@ class coinRecordGenerator:
         pass
 
     def save(self):
-        # Generate location, save with inbuilt function
+        """Generate location, save to location"""
+
+        try:
+            os.makedirs(f"{self.savelocation}{self.coin}/")
+        except OSError:
+            pass
+
         location = f"{self.savelocation}{self.coin}/{self.savename}"
-        tp.to_tensorflow_record(self.evset, location)
+
+        # Create the schema from our evset
+        features = {}
+
+        df = tp.to_pandas(self.evset)
+
+        # calculate unix datetime for timestamp in seconds
+        df["timestamp"] = (df["timestamp"] - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
+
+        for column in df:
+
+            # Ignore timeframe, handle edge cases, otherwise it's a float
+            match column:
+                case "Timeframe":
+                    features[column] = _bytes_feature([df[column].tolist()[0].encode()])
+                case "timestamp":
+                    features[column] = _int64_feature(df[column].tolist())
+                case _:
+                    features[column] = _float_feature(df[column].tolist())
 
 
 
-class FeatureEngineer:
-    """Engineers features for a given evset"""
+        example = tf.train.Example(features=tf.train.Features(feature=features))
+        serialized = example.SerializeToString()
 
-    def __init__(self, evset: tp.event_set):
-        self.evset = evset
-
-    def addKlineFeatures(self):
-        pass
-
-
+        writer = tf.io.TFRecordWriter(location)
+        writer.write(serialized)
+        writer.close()
 
