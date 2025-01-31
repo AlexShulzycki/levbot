@@ -1,3 +1,4 @@
+import numpy as np
 import tensorflow as tf
 import collections
 
@@ -35,6 +36,9 @@ class WindowSlider:
 
         self.otherindexes = {}
         """Dict of indexes where the most forward portion of the buffer is"""
+
+        self.returnNumpy = np.zeros((1 + len(self.others), len(self.features),  self.windowsize))
+        """Array for return values, timeframe, feature, window"""
 
     def stepToPresent(self, timestamp = None):
 
@@ -97,13 +101,36 @@ class WindowSlider:
         return self
 
     def __next__(self):
+        # Fill the response numpy array with data
 
-        response = {}
-        response["basetimestamp"] = self.baseTensor["timestamp"][self.baseindex - self.lookforward]
+        # Fill in with base timeframe
+        for j, feature in enumerate(self.features):
+            # Get the indexes
+            start = self.baseindex - self.windowsize -self.lookforward
+            end = self.baseindex - self.lookforward
+            # Assign the values
+            self.returnNumpy[0][j] = self.baseTensor[feature][start:end]
+
+        # Timeframe
+        for i, (key, tensor) in enumerate(self.otherTensors.items()):
+            # Feature
+            for j, feature in enumerate(self.features):
+                # Get the indexes
+                start = self.otherindexes[key] - self.windowsize
+                end = self.otherindexes[key]
+                # Assign the values
+                self.returnNumpy[i+1][j] = tensor[feature][start:end] # plus 1 since 0 is the base timeframe
+
+        reshape = (len(self.otherTensors) +1, self.windowsize, len(self.features))
+        reshape = self.returnNumpy.reshape(reshape)
+        data = tf.convert_to_tensor(self.returnNumpy)
+
+        # Return future prices
+        pricefromcurrent = self.baseTensor["Close"][self.baseindex - self.lookforward: self.baseindex+1]
 
 
         # Move forward, synchronize all indexes
         self.baseindex += 1
         self.stepToPresent()
 
-        return response
+        return [data, tf.convert_to_tensor(pricefromcurrent)]

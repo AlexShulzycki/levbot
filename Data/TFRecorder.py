@@ -3,7 +3,6 @@ import tensorflow as tf
 import numpy as np
 import pandas as pd
 import temporian as tp
-from h5py._hl import datatype
 from tqdm.auto import tqdm
 
 
@@ -40,6 +39,10 @@ def _bytes_feature(value):
 
 
 class coinRecordGenerator:
+
+    minimum_timestamp = 1597132100
+    """The minimum time, to cut off noise at the start"""
+
     def __init__(self, coin: str, datalocation: str = "raw", savelocation: str = "tfrecords", savename ="test.tfrecord"):
         """
         Handles the saving of each coin to tfrecords, DONT COMBINE TIMEFRAMES
@@ -136,7 +139,7 @@ class coinRecordGenerator:
         # Create the schema from our evset
         features = {}
 
-        df = tp.to_pandas(self.evset)
+        df = tp.to_pandas(self.evset.after(self.minimum_timestamp)) # After the min time
 
         # calculate unix datetime for timestamp in seconds
         df["timestamp"] = (df["timestamp"] - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
