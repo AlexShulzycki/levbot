@@ -54,7 +54,11 @@ class WindowSlider:
         """Array for lookahead return values, lookforward + current, features"""
 
     def stepToPresent(self, timestamp = None):
-
+        """
+        Slides forward timeframes to the timestamp of the base timeframe
+        :param timestamp: timestamp to slide to, if none then current time of base timeframe
+        :return:
+        """
         # Set current time
         if timestamp is None:
             ct = self.baseTensor["timestamp"][self.baseindex - self.lookforward]
@@ -73,6 +77,8 @@ class WindowSlider:
     def moveToTime(self, timestamp: int):
         """
         Move all pointers to the specified time
+
+        :param timestamp: timestamp to move to
         """
 
         for key, index in self.otherindexes.items():
@@ -80,6 +86,7 @@ class WindowSlider:
             ct = self.otherTensors[key]["timestamp"][index]
             # compute delta
             dt = ct - timestamp
+            # estimate delta then call steptopresent
 
     def getLatestTime(self):
         """
@@ -180,3 +187,29 @@ class WindowSlider:
         reshape = (len(self.otherTensors) + 1, self.windowsize, len(self.features))
 
         return tf.convert_to_tensor(self.returndatanumpy), tf.convert_to_tensor(self.returnlookaheadnumpy)
+
+
+class MultiSlideManager:
+    """
+    This class handles interleaving and loading/unloading of window sliders
+    Makes use of tf.data interleaving
+    Randomly slides the window sliders at intervals
+    Decides when each window slider is done
+    """
+
+    def __init__(self, windowsize, lookforward, coins, timeframes, percent_slice):
+        """
+        Initialize
+        :param windowsize: length of each window
+        :param lookforward:
+        :param coins:
+        :param timeframes:
+        :param percent_slice: percent of data you want it to use cointing from start, negative numbers count from end
+        """
+        pass
+
+    def __iter__(self):
+        pass
+
+    def __next__(self):
+        pass
