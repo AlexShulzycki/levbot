@@ -1,9 +1,10 @@
 numpy<2
 notebook
 ipywidgets
-matplotlib
-pandas
-requests
+matplotlib~=3.10.0
+pandas~=2.2.3
+requests~=2.32.3
 temporian>=0.9
-tqdm
-tensorflow
+tqdm~=4.67.1
+tensorflow~=2.18.0
+keras~=3.8.0
