@@ -8,23 +8,34 @@ class WindowSlider:
 
     features = ("Open", "High", "Low", "Close", "Volume")
 
-    def __init__(self, windowsize, lookforward, baseTimeframeDataset, otherdatasets:dict = {}):
+    inMinutes = {
+        "1m": 1,
+        "5m": 5,
+        "15m": 15,
+        "30m": 30,
+        "1h": 60,
+        "6h": 60 * 6,
+        "12h": 60 * 12,
+        "1d": 60 * 24
+    }
+
+    def __init__(self, windowsize, lookforward, datasets:dict):
         """
         Create a window slider that slides over datasets
         :param windowsize: How "wide" the data is
         :param lookforward: How far forward we should look for
-        :param baseTimeframeDataset: Lowest timeframe dataset
-        :param otherdatasets: Dict of other timeframe datasets, {"5m": dataset, "15m": dataset}
+        :param datasets: Dict of datasets, {"5m": dataset, "15m": dataset}
         """
         # Set up variables
         self.windowsize = windowsize
         self.lookforward = lookforward
 
-        self.base = baseTimeframeDataset
+        # pop the lowest timeframe (base timeframe)
+        self.base = datasets.pop(sorted(datasets.keys(), key=lambda x: self.inMinutes[x])[0])
         """base timeframe dataset"""
         self.baseTensor = None
         """base Tensor dict"""
-        self.others = otherdatasets
+        self.others = datasets
         """TODO dict of datasets"""
         self.otherTensors = {}
         """Tensor dict of what the datasets contain"""
@@ -59,13 +70,22 @@ class WindowSlider:
                 # We are not there yet, increase the index
                 self.otherindexes[key] += 1
 
+    def moveToTime(self, timestamp: int):
+        """
+        Move all pointers to the specified time
+        """
+
+        for key, index in self.otherindexes.items():
+            # get current time at pointer
+            ct = self.otherTensors[key]["timestamp"][index]
+            # compute delta
+            dt = ct - timestamp
+
     def getLatestTime(self):
         """
         Returns the latest timestamp of the other timeframes
         """
-
         # get current time as given by the base timeframe
-
         time = self.baseTensor["timestamp"][self.baseindex - self.lookforward]
 
         for key, index in self.otherindexes.items():
