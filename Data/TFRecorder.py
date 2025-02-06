@@ -40,6 +40,7 @@ def _bytes_feature(value):
 
 class coinRecordGenerator:
 
+    # TODO transition to fully using pandas
     minimum_timestamp = 1597132100
     """The minimum time, to cut off noise at the start"""
 

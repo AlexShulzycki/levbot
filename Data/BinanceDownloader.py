@@ -1,5 +1,4 @@
 import shutil
-from tabnanny import verbose
 
 import requests
 import datetime
