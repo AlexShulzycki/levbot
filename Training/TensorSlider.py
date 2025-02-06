@@ -1,12 +1,13 @@
 import numpy as np
 import tensorflow as tf
-from numba import jit, njit, experimental
+import numba as nb
+from numba.experimental import jitclass
 
 
 class WindowSlider:
 
     #TODO Test raise StopIterations
-    features:list = ["Open", "High", "Low", "Close", "Volume"]
+    features:list = ["timestamp", "Open", "High", "Low", "Close", "Volume"]
 
     inMinutes:dict = {
         "1m": 1,
@@ -31,170 +32,43 @@ class WindowSlider:
         self.lookforward = lookforward
         self.batchsize = batchsize
 
-        # pop the lowest timeframe (base timeframe)
-        self.base = datasets.pop(sorted(datasets.keys(), key=lambda x: self.inMinutes[x])[0])
-        """base timeframe dataset"""
-        self.baseTensor = None
-        """base Tensor dict"""
-        self.others = datasets
-        """TODO dict of datasets"""
-        self.otherTensors = {}
-        """Tensor dict of what the datasets contain"""
+        # We need to transform the datasets from a dict into a numpy array we can feed to the speedslider
+
+        sortedtimeframes = sorted(datasets.keys(), key=lambda x: self.inMinutes[x])
+        data = []
+        """Timeframe, Feature, Entry"""
+        # Call iter on each dataset and extract data
+        for key in sortedtimeframes:
+            data.append(datasets[key].__iter__().__next__())
+
+        # array to fill
+        processed = np.zeros((len(data), len(self.features), len(data[0]["timestamp"])), dtype="float32")
+        # length of the data is the base timeframe length
+
+        for i, timeframe in enumerate(data):
+            for j, key in enumerate(self.features):
+                featurelength = len(timeframe[key])
+                processed[i, j, 0:featurelength] = timeframe[key].numpy()
+                # if the data is shorter than the base timeframe, the rest is padded with zeros.
 
 
-        # The +1 is handled by the fact that the index is 1 less than the total amount
-        self.baseindex = self.windowsize + self.lookforward
-        """Index where the most forward portion of the buffer is"""
+        # Set up speed slider
+        self.speedslider = SpeedSlider(processed, batchsize, windowsize, lookforward)
 
-        self.otherindexes = {}
-        """Dict of indexes where the most forward portion of the buffer is"""
-
-        self.returndatanumpybatch = np.zeros((self.batchsize, 1 + len(self.others), len(self.features),  self.windowsize))
-        self.returndatanumpy = np.zeros(( 1 + len(self.others), len(self.features), self.windowsize))
-        """Array for data return values, timeframe, feature, window"""
-        self.returnlookaheadnumpybatch = np.zeros((self.batchsize,self.lookforward+1, len(self.features)))
-        self.returnlookaheadnumpy = np.zeros((self.lookforward + 1, len(self.features)))
-        """Array for lookahead return values, lookforward + current, features"""
-
-    def stepToPresent(self, timestamp = None):
-        """
-        Slides forward timeframes to the timestamp of the base timeframe
-        :param timestamp: timestamp to slide to, if none then current time of base timeframe
-        :return:
-        """
-        # Set current time
-        if timestamp is None:
-            ct = self.baseTensor["timestamp"][self.baseindex - self.lookforward]
-        else:
-            ct = timestamp
-            while ct > self.baseTensor["timestamp"][self.baseindex - self.lookforward]:
-                # We are not there yet, increase the index
-                self.baseindex += 1
-
-        for key, tensor in self.otherTensors.items():
-            # Check whether margin is before the current time
-            while ct > tensor["timestamp"][self.otherindexes[key]]:
-                # We are not there yet, increase the index
-                self.otherindexes[key] += 1
-
-    def moveToTime(self, timestamp: int):
-        """
-        Move all pointers to the specified time
-
-        :param timestamp: timestamp to move to
-        """
-
-        for key, index in self.otherindexes.items():
-            # get current time at pointer
-            ct = self.otherTensors[key]["timestamp"][index]
-            # compute delta
-            dt = ct - timestamp
-            # estimate delta then call steptopresent
-
-
-    def getLatestTime(self) -> int:
-        """
-        Returns the latest timestamp of the other timeframes
-        """
-        # get current time as given by the base timeframe
-        time = self.baseTensor["timestamp"][self.baseindex - self.lookforward]
-
-        for key, index in self.otherindexes.items():
-            latest = self.otherTensors[key]["timestamp"][index]
-            if latest > time:
-                time = latest
-
-        return time
-
-    def getFeaturesAtKey(self, key):
-        pass
-
-
-    def init_from_zero(self):
-        """
-        Initializes the window slider from beginning
-        """
-
-        # Call iter on each dataset
-        self.baseTensor = self.base.__iter__().__next__()
-        for key, dataset in self.others.items():
-            self.otherTensors[key] = dataset.__iter__().__next__()
-
-        # Reset indexes
-        # The +1 is handled by the fact that the index is 1 less than the total amount
-        self.baseindex = self.windowsize + self.lookforward
-
-        for key, dataset in self.others.items():
-            self.otherindexes[key] = self.windowsize
-
-        # Get latest time and step everyone to it
-        latest = self.getLatestTime()
-        self.stepToPresent(latest)
-
-        return self
-
-    def fillresponsearrays(self):
-        """
-        Fills the response numpy arrays with data
-        TODO test batch functionality
-        """
-
-        # Fill in with base timeframe
-        for j, feature in enumerate(self.features):
-            # Get the indexes
-            start = self.baseindex - self.windowsize -self.lookforward
-            end = self.baseindex - self.lookforward
-            # Assign the values
-            self.returndatanumpy[0][j] = self.baseTensor[feature][start:end]
-
-        # Timeframe
-        for i, (key, tensor) in enumerate(self.otherTensors.items()):
-            # Feature
-            for j, feature in enumerate(self.features):
-                # Get the indexes
-                start = self.otherindexes[key] - self.windowsize
-                end = self.otherindexes[key]
-                # Assign the values
-                self.returndatanumpy[i+1][j] = tensor[feature][start:end] # plus 1 since 0 is the base timeframe
-
-        # Fill up future price response array (base timeframe only)
-        for i, feature in enumerate(self.features):
-            start = self.baseindex - self.lookforward
-            end = self.baseindex + 1
-            self.returnlookaheadnumpy[:,i] = self.baseTensor[feature][start:end]
-
-    def slideTo(self, timestamp: int):
-        """
-        Slides the window to the given timestamp
-        :param timestamp: unix time to slide to (in seconds)
-        """
-
-        currenttime = self.baseTensor["timestamp"][self.baseindex - self.lookforward]
-        """Current timestamp as is pointed to by the base timeframe"""
-        delta = timestamp - currenttime
-        """By how much we need to move"""
-
-        # Calculate step deltas for each timeframe to speed up moving
-
-        pass
 
     def __iter__(self):
-        return self.init_from_zero()
+        """
+        Called when an iteration is started.
+        """
+        self.speedslider.init_from_zero()
+        return self
 
     def __next__(self):
-
+        """
+        Called after iteration started, returns next value
+        """
         try:
-
-            # fill up data response arrays in batches
-            for i in range(self.batchsize):
-                # Synchronize all indexes
-                self.baseindex += 1
-                self.stepToPresent()
-                self.fillresponsearrays()
-                self.returndatanumpybatch[i] = self.returndatanumpy
-                self.returnlookaheadnumpybatch[i] = self.returnlookaheadnumpy
-
-            return tf.convert_to_tensor(self.returndatanumpybatch), tf.convert_to_tensor(self.returnlookaheadnumpybatch)
+            return self.speedslider.next()
 
         except IndexError:
             raise StopIteration
@@ -225,3 +99,115 @@ class MultiSlideManager:
     def __next__(self):
         pass
 
+
+
+spec = [
+    ("batchsize", nb.int32),
+    ("windowsize", nb.int32),
+    ("lookforward", nb.int32),
+    ("indexes", nb.int32[:]),
+    # indexes where the pointers are
+    ("tensors", nb.float32[:,:,:]),
+    # data from tfdata, [timeframe, feature, entries]
+    ("lookforwardoutput", nb.float32[:,:,:,:]),
+    # lookforwardoutput, [batch, current + lookforward, labels]
+    ("dataoutput", nb.float32[:,:,:,:]),
+    # data output, [batch, timeframe, feature, entries]
+    ("deltas", nb.float32[:]),
+    # approximate time deltas for each timeframe
+    ("currenttimes", nb.int32[:]),
+]
+
+# Features are as follows: [timeframe, open, high, low, close, volume]
+
+@jitclass(spec)
+class SpeedSlider:
+    def __init__(self, tensors, batchsize, windowsize, lookforward):
+        self.tensors = tensors
+        """Indexed by increasing timeframe, base is at index 0 -> [timeframe, feature, entry]"""
+        self.batchsize = batchsize
+        self.windowsize = windowsize
+        self.lookforward = lookforward
+        self.indexes = np.zeros(shape=(tensors.shape[0]), dtype=np.int32)
+        """Indexed by increasing timeframe, base is at index 0"""
+
+        # Set up output buffers
+        self.lookforwardoutput = np.zeros(shape=(self.batchsize, tensors.shape[0], tensors.shape[1]-1, self.lookforward +1), dtype=np.float32)
+        self.dataoutput = np.zeros(shape=(self.batchsize, tensors.shape[0], tensors.shape[1]-1, self.windowsize), dtype=np.float32)
+        """ [Batch, timeframe, feature, entry], feature -1 because we dont include the timestamp"""
+        # Compute time variables
+        self.deltas = np.zeros(shape=(tensors.shape[0]), dtype=np.float32)
+        """Approximate delta t between timeframe entries"""
+        self.currenttimes = np.zeros(shape=(tensors.shape[0]), dtype=np.int32)
+        """Timestamp at the indexes for each timeframe"""
+
+        # Update timestamps
+        self.updateCurrentTimestamps()
+
+        # Compute deltas
+        for i in range(tensors.shape[0]):
+            self.deltas[i] = self.tensors[i,0,1] - self.tensors[i,0,1] # get delta
+
+
+    def updateCurrentTimestamps(self):
+        for i in range(self.currenttimes.shape[0]):
+            self.currenttimes[i] = self.tensors[i,0,self.indexes[i]] # get timestamp
+
+    def getLatestTime(self) -> np.float32:
+
+        self.updateCurrentTimestamps()
+
+        latest = 0
+        for timestamp in self.currenttimes:
+            thislatest = timestamp
+            if thislatest > latest:
+                latest = thislatest
+
+        return latest
+
+    def stepToPresent(self, timestamp = None):
+
+        if timestamp is None:
+            self.updateCurrentTimestamps()
+            timestamp = self.currenttimes[0]
+
+        for timeframe, timeframetensor in enumerate(self.tensors):
+            while timestamp > timeframetensor[0, self.indexes[timeframe] - self.lookforward]:
+                self.indexes[timeframe] += 1
+
+    def init_from_zero(self):
+        # Slide all indexes to the minimum window size
+        self.indexes[:] = self.windowsize + self.lookforward
+
+        latest = self.getLatestTime()
+        self.stepToPresent(latest)
+
+    def fillresponsearrays(self, batchindex):
+
+        # iterate over each timeframe
+        for timeframe, timeframetensor in enumerate(self.tensors):
+            # We are skipping the timestamp at index 0
+            # We are only selecting the window size
+            windowstart = self.indexes[timeframe] - self.lookforward - self.windowsize
+            windowend = self.indexes[timeframe] - self.lookforward
+
+            # fill data output
+            self.dataoutput[batchindex][timeframe] = timeframetensor[1:, windowstart: windowend]
+
+            # fill lookforward
+            self.lookforwardoutput[batchindex][timeframe] = timeframetensor[1:, windowend: self.indexes[timeframe]+1]
+
+
+    def next(self):
+
+        # fill up batches
+        for i in range(self.batchsize):
+
+            # Step up
+            self.indexes[0] += 1
+            self.updateCurrentTimestamps()
+            self.stepToPresent(self.currenttimes[0])
+            # Fill
+            self.fillresponsearrays(i)
+
+        return self.dataoutput, self.lookforwardoutput
