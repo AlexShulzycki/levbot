@@ -148,6 +148,14 @@ class SpeedSlider:
         for i in range(tensors.shape[0]):
             self.deltas[i] = self.tensors[i,0,1] - self.tensors[i,0,1] # get delta
 
+    def updateIndex(self, index:int, updateTo):
+        tlength = self.tensors.shape[2]
+        if updateTo >= tlength or updateTo < 0:
+            print(f"Index maxxed, index: {index}, updateTo: {updateTo}")
+            raise IndexError
+        else:
+            self.indexes[index] = updateTo
+
 
     def updateCurrentTimestamps(self):
         for i in range(self.currenttimes.shape[0]):
@@ -173,11 +181,12 @@ class SpeedSlider:
 
         for timeframe, timeframetensor in enumerate(self.tensors):
             while timestamp > timeframetensor[0, self.indexes[timeframe] - self.lookforward]:
-                self.indexes[timeframe] += 1
+                currentindex = self.indexes[timeframe]
+                self.updateIndex(timeframe, currentindex + 1)
 
     def init_from_zero(self):
         # Slide all indexes to the minimum window size
-        self.indexes[:] = self.windowsize + self.lookforward
+        self.indexes[:] = self.windowsize + self.lookforward # we will allow this bypassing updateindex
 
         latest = self.getLatestTime()
         self.stepToPresent(latest)
@@ -204,7 +213,8 @@ class SpeedSlider:
         for i in range(self.batchsize):
 
             # Step up
-            self.indexes[0] += 1
+            nextindex = self.indexes[0] +1
+            self.updateIndex(0, nextindex)
             self.updateCurrentTimestamps()
             self.stepToPresent(self.currenttimes[0])
             # Fill
