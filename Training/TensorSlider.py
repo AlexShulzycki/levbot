@@ -1,13 +1,14 @@
 import numpy as np
 import tensorflow as tf
+from numba import jit, njit, experimental
+
 
 class WindowSlider:
 
     #TODO Test raise StopIterations
+    features:list = ["Open", "High", "Low", "Close", "Volume"]
 
-    features = ("Open", "High", "Low", "Close", "Volume")
-
-    inMinutes = {
+    inMinutes:dict = {
         "1m": 1,
         "5m": 5,
         "15m": 15,
@@ -18,7 +19,7 @@ class WindowSlider:
         "1d": 60 * 24
     }
 
-    def __init__(self, datasets:dict, windowsize = 100, lookforward = 5, batchsize = 1):
+    def __init__(self, datasets:dict, windowsize:int = 100, lookforward:int = 5, batchsize:int = 1):
         """
         Create a window slider that slides over datasets
         :param windowsize: How "wide" the data is
@@ -48,9 +49,11 @@ class WindowSlider:
         self.otherindexes = {}
         """Dict of indexes where the most forward portion of the buffer is"""
 
-        self.returndatanumpy = np.zeros((self.batchsize, 1 + len(self.others), len(self.features),  self.windowsize))
+        self.returndatanumpybatch = np.zeros((self.batchsize, 1 + len(self.others), len(self.features),  self.windowsize))
+        self.returndatanumpy = np.zeros(( 1 + len(self.others), len(self.features), self.windowsize))
         """Array for data return values, timeframe, feature, window"""
-        self.returnlookaheadnumpy = np.zeros((self.batchsize,self.lookforward+1, len(self.features)))
+        self.returnlookaheadnumpybatch = np.zeros((self.batchsize,self.lookforward+1, len(self.features)))
+        self.returnlookaheadnumpy = np.zeros((self.lookforward + 1, len(self.features)))
         """Array for lookahead return values, lookforward + current, features"""
 
     def stepToPresent(self, timestamp = None):
@@ -88,7 +91,8 @@ class WindowSlider:
             dt = ct - timestamp
             # estimate delta then call steptopresent
 
-    def getLatestTime(self):
+
+    def getLatestTime(self) -> int:
         """
         Returns the latest timestamp of the other timeframes
         """
@@ -135,30 +139,29 @@ class WindowSlider:
         TODO test batch functionality
         """
 
-        for bindex in range(self.batchsize):
-            # Fill in with base timeframe
+        # Fill in with base timeframe
+        for j, feature in enumerate(self.features):
+            # Get the indexes
+            start = self.baseindex - self.windowsize -self.lookforward
+            end = self.baseindex - self.lookforward
+            # Assign the values
+            self.returndatanumpy[0][j] = self.baseTensor[feature][start:end]
+
+        # Timeframe
+        for i, (key, tensor) in enumerate(self.otherTensors.items()):
+            # Feature
             for j, feature in enumerate(self.features):
                 # Get the indexes
-                start = self.baseindex - self.windowsize -self.lookforward + bindex
-                end = self.baseindex - self.lookforward + bindex
+                start = self.otherindexes[key] - self.windowsize
+                end = self.otherindexes[key]
                 # Assign the values
-                self.returndatanumpy[bindex][0][j] = self.baseTensor[feature][start:end]
+                self.returndatanumpy[i+1][j] = tensor[feature][start:end] # plus 1 since 0 is the base timeframe
 
-            # Timeframe
-            for i, (key, tensor) in enumerate(self.otherTensors.items()):
-                # Feature
-                for j, feature in enumerate(self.features):
-                    # Get the indexes
-                    start = self.otherindexes[key] - self.windowsize + bindex
-                    end = self.otherindexes[key] + bindex
-                    # Assign the values
-                    self.returndatanumpy[bindex][i+1][j] = tensor[feature][start:end] # plus 1 since 0 is the base timeframe
-
-            # Fill up future price response array (base timeframe only)
-            for i, feature in enumerate(self.features):
-                start = self.baseindex - self.lookforward + bindex
-                end = self.baseindex + 1 + bindex
-                self.returnlookaheadnumpy[bindex][:,i] = self.baseTensor[feature][start:end]
+        # Fill up future price response array (base timeframe only)
+        for i, feature in enumerate(self.features):
+            start = self.baseindex - self.lookforward
+            end = self.baseindex + 1
+            self.returnlookaheadnumpy[:,i] = self.baseTensor[feature][start:end]
 
     def slideTo(self, timestamp: int):
         """
@@ -182,14 +185,16 @@ class WindowSlider:
 
         try:
 
-            # Synchronize all indexes
-            self.baseindex += self.batchsize
-            self.stepToPresent()
+            # fill up data response arrays in batches
+            for i in range(self.batchsize):
+                # Synchronize all indexes
+                self.baseindex += 1
+                self.stepToPresent()
+                self.fillresponsearrays()
+                self.returndatanumpybatch[i] = self.returndatanumpy
+                self.returnlookaheadnumpybatch[i] = self.returnlookaheadnumpy
 
-            # fill up data response arrays
-            self.fillresponsearrays()
-
-            return tf.convert_to_tensor(self.returndatanumpy), tf.convert_to_tensor(self.returnlookaheadnumpy)
+            return tf.convert_to_tensor(self.returndatanumpybatch), tf.convert_to_tensor(self.returnlookaheadnumpybatch)
 
         except IndexError:
             raise StopIteration
@@ -219,3 +224,4 @@ class MultiSlideManager:
 
     def __next__(self):
         pass
+
