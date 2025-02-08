@@ -401,15 +401,16 @@ class RandomSpeedSlider:
         filled.
         :return: Filled output buffers
         """
-        basetimeframelength = self.tensors.shape[2]
+        total = self.tensors.shape[2] / self.batchsize /10 # keep the iteration number reasonable
+        self.iterationcount += 1
         # Check if we are done iterating
-        if self.iterationcount > basetimeframelength: # we are iterating for the size of the base timeframe
+        if self.iterationcount > total: # we are iterating for the size of the base timeframe
             raise IndexError
 
         # Still iterating, lets select a random index until we find one that is valid
         valid = False
         while not valid:
-            randindex = random.randint(self.windowsize, basetimeframelength -1) # -1 since we want the index
+            randindex = random.randint(self.windowsize, self.tensors.shape[2] -1) # -1 since we want the index
             valid = self.synchronizeIndexesToTimestamp(self.tensors[0, 0, randindex])
 
 
