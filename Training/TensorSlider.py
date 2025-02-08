@@ -365,9 +365,22 @@ class RandomSpeedSlider:
         self.iterationcount = 0
 
     def fillresponsearrays(self, batchindex):
+        """
+        Fills the output buffers based on the current index location
+        """
+        prophetlimit = self.tensors[0,0,self.indexes[0]-1] + 5
+        """Latest in-window timestamp of the base timeframe"""
+        # We give five seconds of leeway if the times aren't super exact
 
         # iterate over each timeframe
         for timeframe, timeframetensor in enumerate(self.tensors):
+
+            # Check if the latest bit in the window is in the future
+            latest = self.tensors[timeframe,0,self.indexes[timeframe]-1]
+            if latest > prophetlimit:
+                # BIG PROBLEM, WE ARE SEEING THE FUTURE
+                raise Exception("WE HAVE BREACHED THE PROPHET LIMIT, WE CAN SEE THE FUTURE!!!")
+
             # We are skipping the timestamp at index 0
             # We are only selecting the window size
             windowstart = self.indexes[timeframe] - self.windowsize
